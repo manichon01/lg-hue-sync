@@ -54,6 +54,10 @@ pub struct CaptureRecovery {
 }
 
 impl CaptureRecovery {
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+
     pub fn frame_received(&mut self, now: Instant) {
         self.unavailable_frames = 0;
         let since = *self.healthy_since.get_or_insert(now);

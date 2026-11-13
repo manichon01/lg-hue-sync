@@ -17,6 +17,7 @@ pub struct CaptureSourcePolicy {
     display_off: bool,
     source_paused: bool,
     manually_stopped: bool,
+    app_failed: bool,
 }
 
 impl CaptureSourcePolicy {
@@ -26,7 +27,20 @@ impl CaptureSourcePolicy {
             display_off: false,
             source_paused: compatible == Some(false) && requested,
             manually_stopped: false,
+            app_failed: false,
         }
+    }
+
+    /// An app could not be captured (e.g. protected video): wait for another source.
+    pub fn app_capture_failed(&mut self) {
+        self.app_failed = true;
+    }
+
+    pub fn observe_source(&mut self, source: crate::capture_source::CaptureSource) {
+        if !matches!(source, crate::capture_source::CaptureSource::App | crate::capture_source::CaptureSource::Unknown) {
+            self.app_failed = false;
+        }
+        self.observe(source.compatible());
     }
 
     pub fn observe(&mut self, compatible: Option<bool>) {
@@ -38,6 +52,9 @@ impl CaptureSourcePolicy {
     pub fn manual_request(&mut self, requested: Option<bool>) {
         if let Some(requested) = requested {
             self.manually_stopped = !requested;
+            if requested {
+                self.app_failed = false;
+            }
             if !requested {
                 self.source_paused = false;
             } else if self.blocked() {
@@ -51,7 +68,7 @@ impl CaptureSourcePolicy {
     }
 
     pub fn blocked(&self) -> bool {
-        self.display_off || self.compatible == Some(false)
+        self.display_off || self.app_failed || self.compatible == Some(false)
     }
     pub fn manually_stopped(&self) -> bool {
         self.manually_stopped

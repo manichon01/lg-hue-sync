@@ -191,7 +191,7 @@ export class FrozenPreview {
         if (!this.state.busy)
           this.state.message = this.state.frame
             ? 'Frozen frame retained. New frames need active HDMI screen sync.'
-            : 'Play an HDMI source and start screen sync to capture a frame. Built-in apps are not supported.';
+            : 'Play an HDMI source or an app and start screen sync to capture a frame. Protected apps cannot be captured.';
       }
     }
     this.emit();

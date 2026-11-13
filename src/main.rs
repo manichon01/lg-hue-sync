@@ -790,7 +790,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
 
         let observation = update_tv_observation(&mut tv_events, &shared_state);
         signal_hold.observe(observation.video.as_ref(), std::time::Instant::now());
-        source_policy.observe(observation.source.compatible());
+        source_policy.observe_source(observation.source);
         source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
         if auto_tv_power {
             if let Some(active) = observation.power.active {
@@ -897,7 +897,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 && source_policy.blocked()
                 && !shared_state.display_off.load(Ordering::Relaxed)
             {
-                shared_state.set_sync_state(SyncState::UnsupportedSource, Some("The Home screen has no video to capture; open an app or HDMI input to resume.".into()));
+                shared_state.set_sync_state(SyncState::UnsupportedSource, Some("This screen cannot be captured (Home or a protected app); switch to HDMI or another app to resume.".into()));
             } else if !capture_faulted {
                 shared_state.set_sync_state(SyncState::Paused, None);
             }
@@ -912,13 +912,13 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 watchdog.tick();
                 let observation = update_tv_observation(&mut tv_events, &shared_state);
-                source_policy.observe(observation.source.compatible());
+                source_policy.observe_source(observation.source);
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 if source_policy.source_paused()
                     && source_policy.blocked()
                     && !shared_state.display_off.load(Ordering::Relaxed)
                 {
-                    shared_state.set_sync_state(SyncState::UnsupportedSource, Some("The Home screen has no video to capture; open an app or HDMI input to resume.".into()));
+                    shared_state.set_sync_state(SyncState::UnsupportedSource, Some("This screen cannot be captured (Home or a protected app); switch to HDMI or another app to resume.".into()));
                 } else if source_policy.manually_stopped() && !capture_faulted {
                     shared_state.set_sync_state(SyncState::Paused, None);
                 }
@@ -1428,7 +1428,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
             source_policy.manual_request(pending_commands.manual_running.take());
             source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
             let latest = update_tv_observation(&mut tv_events, &shared_state);
-            source_policy.observe(latest.source.compatible());
+            source_policy.observe_source(latest.source);
             let power_inactive = auto_tv_power && latest.power.active == Some(false);
             if power_inactive {
                 observed_tv_power = Some(false);
@@ -1789,6 +1789,22 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                         }
                         continue 'sync_loop;
                     }
+                    RecoveryAction::Pause
+                        if update_tv_observation(&mut tv_events, &shared_state).source
+                            == capture_source::CaptureSource::App =>
+                    {
+                        warn!("App video cannot be captured ({e:#}); waiting for another source.");
+                        capture = Box::new(MockCapture::new(
+                            config.capture_width,
+                            config.capture_height,
+                        ));
+                        shared_state
+                            .capture_hardware
+                            .store(false, Ordering::Relaxed);
+                        capture_recovery.reset();
+                        source_policy.app_capture_failed();
+                        continue 'sync_loop;
+                    }
                     RecoveryAction::Pause => {
                         error!("Capture paused ({e:#}); invalid frame or recovery limit reached. Use Start or Restart to retry.");
                         capture = Box::new(MockCapture::new(
@@ -1829,7 +1845,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 source_policy.manual_request(pending_commands.manual_running.take());
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 let latest = update_tv_observation(&mut tv_events, &shared_state);
-                source_policy.observe(latest.source.compatible());
+                source_policy.observe_source(latest.source);
                 let power_inactive = auto_tv_power && latest.power.active == Some(false);
                 if power_inactive {
                     observed_tv_power = Some(false);

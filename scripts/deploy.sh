@@ -112,6 +112,8 @@ WorkingDirectory=/var/home/root/lg-hue-sync
 ExecStart=/bin/sh -c 'exec /var/home/root/lg-hue-sync/lg-hue-sync run --config /var/home/root/lg-hue-sync/config.json >> /var/home/root/lg-hue-sync/daemon.log 2>&1'
 Restart=always
 RestartSec=5
+WatchdogSec=60
+NotifyAccess=main
 TimeoutStopSec=3
 
 [Install]
