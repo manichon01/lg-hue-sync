@@ -4,7 +4,7 @@
  * layouts are untouched. Sizes follow the viewport height so 1080p and 4K viewports match.
  */
 html.tv {
-  font-size: min(1.56vh, 0.875vw);
+  font-size: min(1.74vh, 0.978vw);
 }
 html.tv,
 html.tv body {
@@ -70,7 +70,7 @@ html.tv body {
 /* Tuning: style + preview on the left, faders and processing options on the right. */
 .tv #panel-tuning {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.9rem 1.2rem;
 }
@@ -120,15 +120,13 @@ html.tv body {
   inline-size: 9.5rem;
 }
 .tv .tuning-help {
-  margin-block: 0.6rem;
-  padding: 0.7rem 0.9rem;
-  min-block-size: 0;
+  display: none;
 }
 .tv .processing > summary {
   min-block-size: 2.4rem;
 }
 .tv .processing .section-body {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem 1rem;
   padding-block-start: 0.4rem;
 }
@@ -152,7 +150,7 @@ html.tv body {
 /* Devices: Hue and Nanoleaf side by side on the left, calibration and maintenance on the right. */
 .tv #panel-devices {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.9rem 1.2rem;
   align-content: start;
@@ -177,8 +175,8 @@ html.tv body {
   display: none;
 }
 .tv #devicesSection > .section-body {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.6rem;
 }
 .tv .device-subsection {
   margin-block-start: 0;
@@ -222,4 +220,9 @@ html.tv body {
 .tv .fader input[type="range"]::-webkit-slider-thumb {
   inline-size: 1.9rem;
   block-size: 1.9rem;
+}
+
+/* Diagnostics: all cards in one row so a larger font still fits. */
+.tv .diagnostics-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }

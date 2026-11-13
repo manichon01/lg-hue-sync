@@ -11,6 +11,13 @@
     button, select { font: inherit; padding: 6px; }
     #note { max-width: 30rem; font-size: 13px; }
     :fullscreen #controls { display: none; }
+    #tune { position: fixed; bottom: 12px; left: 12px; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 8px 12px; color: white; background: #111e; font: 14px system-ui, sans-serif; max-width: calc(100vw - 48px); }
+    #tune label { display: flex; align-items: center; gap: 6px; }
+    #tune input[type=range] { width: 9rem; }
+    #lights { display: flex; gap: 6px; align-items: center; }
+    #lights span { width: 2.2rem; height: 1.4rem; border: 1px solid #fff8; border-radius: 4px; background: #000; }
+    #tuneNote { font-size: 12px; opacity: .8; }
+    :fullscreen #tune { display: none; }
   </style>
 </head>
 <body>
@@ -34,6 +41,13 @@
     <button id="next" type="button">Next</button>
     <button id="fullscreen" type="button">Fullscreen</button>
     <span id="note">Nominal SDR browser colours. Fixed Dolby Vision output is not a mastered DV reference.</span>
+  </div>
+  <div id="tune">
+    <label><input id="directRgb" type="checkbox"> Direct RGB</label>
+    <label>Saturation <input id="saturation" type="range" min="0.5" max="2.5" step="0.1"> <output id="saturationOut"></output></label>
+    <label>Brightness <input id="brightness" type="range" min="0.5" max="2.5" step="0.1"> <output id="brightnessOut"></output></label>
+    <span id="lights" title="Colour currently sent to each Hue light"></span>
+    <span id="tuneNote">Changes apply live and are saved.</span>
   </div>
   <script>
     const colors = {
@@ -61,6 +75,44 @@
       if (event.key === 'ArrowRight') move(1);
     });
     show(choice.value);
+
+    // Live light settings, so colour can be tuned while a patch is on screen.
+    const tune = { settings: null, timer: 0, saveTimer: 0 };
+    const $ = id => document.getElementById(id);
+    function syncTune() {
+      const v = tune.settings;
+      if (!v) return;
+      $('directRgb').checked = !v.use_xy_gamut;
+      $('saturation').value = v.saturation_boost; $('saturationOut').textContent = Number(v.saturation_boost).toFixed(1) + '×';
+      $('brightness').value = v.brightness_multiplier; $('brightnessOut').textContent = Number(v.brightness_multiplier).toFixed(1) + '×';
+    }
+    async function pushTune(change) {
+      if (!tune.settings) return;
+      Object.assign(tune.settings, change);
+      syncTune();
+      clearTimeout(tune.timer);
+      tune.timer = setTimeout(async () => {
+        try {
+          await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tune.settings) });
+          clearTimeout(tune.saveTimer);
+          tune.saveTimer = setTimeout(() => fetch('/api/save-config', { method: 'POST' }).catch(() => {}), 1000);
+        } catch (_) { $('tuneNote').textContent = 'Could not reach the daemon.'; }
+      }, 150);
+    }
+    async function pollTune() {
+      try {
+        const status = await (await fetch('/api/status')).json();
+        if (!tune.settings && status.settings) { tune.settings = status.settings; syncTune(); }
+        const box = $('lights');
+        const colours = status.hue_colors || [];
+        while (box.children.length < colours.length) box.appendChild(document.createElement('span'));
+        colours.forEach(([, c], i) => { box.children[i].style.background = `rgb(${c.r},${c.g},${c.b})`; });
+      } catch (_) { /* daemon stopped or restarting */ }
+    }
+    $('directRgb').addEventListener('change', e => pushTune({ use_xy_gamut: !e.target.checked }));
+    $('saturation').addEventListener('input', e => pushTune({ saturation_boost: Number(e.target.value) }));
+    $('brightness').addEventListener('input', e => pushTune({ brightness_multiplier: Number(e.target.value) }));
+    pollTune(); setInterval(pollTune, 500);
   </script>
 </body>
 </html>

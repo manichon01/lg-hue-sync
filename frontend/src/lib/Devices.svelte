@@ -86,7 +86,7 @@
 </script>
 
 <details class="card accordion" ontoggle={showDevices} id="devicesSection" open={isTv}>
-  <summary>Devices <span class="muted">Hue &amp; Nanoleaf</span></summary>
+  <summary>Devices <span class="muted">{isTv ? 'Hue' : 'Hue & Nanoleaf'}</span></summary>
   <div class="section-body">
     <SettingToggle
       title="Follow TV power"
@@ -154,6 +154,7 @@
           disabled={model.busy}
         />{/if}
     </section>
+{#if !isTv}
     <section class="device-subsection">
       <h2>Nanoleaf 4D</h2>
       <p class="muted">Hold the controller power button 5–7 seconds until it blinks, then pair.</p>
@@ -194,13 +195,14 @@
           disabled={model.busy}
         />{/if}
     </section>
+{/if}
   </div>
 </details>
 <details class="card accordion" open={isTv}>
   <summary>Calibration</summary>
   <div class="section-body">
     <p class="muted">
-      Visual matching only; these patterns do not measure light or alter the TV picture settings.
+      Colour buttons send the colour straight to the lights. The capture patterns page must be shown on the HDMI source (for example cast it from a PC to the Google TV): the TV captures it and the lights react. It has live settings and a view of the colours sent to the lights.
     </p>
     <a class="text-link" href="/capture-patterns" target="_blank" rel="noopener"
       >Open TV capture patterns ↗</a
@@ -212,6 +214,7 @@
           onclick={() => run(`/api/test-pattern/${value}`)}>{label}</Button
         >{/each}
     </div>
+{#if !isTv}
     <section class="device-subsection">
       <h2>Nanoleaf alignment</h2>
       <p class="muted">Use the 4D tracer to locate the first physical segment.</p>
@@ -249,6 +252,7 @@
         >Apply alignment</Button
       >
     </section>
+{/if}
   </div>
 </details>
 <details class="card accordion" open={isTv}>

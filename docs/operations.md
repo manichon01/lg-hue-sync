@@ -54,7 +54,7 @@ This is encoded-RGB interpolation, not perceptual-space blending or HDR decoding
 
 ## Read-only capture colour probe
 
-The dashboard's `/capture-patterns` page shows nominal SDR patches. Load it in the browser on the HDMI source before stopping the daemon; its controls continue to work without the server. Apple TV fixed Dolby Vision output can show how that output mode affects capture, but the browser patches are not authored Dolby Vision reference values. A verified HDR10 or Dolby Vision video is required to assess those encoded source paths.
+The dashboard's `/capture-patterns` page shows nominal SDR patches. Load it in the browser on the HDMI source before stopping the daemon; the patch controls continue to work without the server. A bottom panel adjusts Direct RGB, saturation and brightness live (saved like the dashboard) and shows the colour currently sent to each Hue light, so colour can be tuned while a patch is displayed. Opening the page in the TV's own browser is not captured. Apple TV fixed Dolby Vision output can show how that output mode affects capture, but the browser patches are not authored Dolby Vision reference values. A verified HDR10 or Dolby Vision video is required to assess those encoded source paths.
 
 `test-capture --raw-nv12-stats` requires free vtCapture hardware and prints five central Y/Cb/Cr summaries plus the TV's read-only reported dynamic-range mode. It never saves full frames. Stop the daemon before each probe, then restart it even if the probe fails. Confirm the service is active again; the existing `make test-capture` target does not manage that lifecycle. The mode label is a TV output hint, not capture colour-space metadata. Do not change the fixed BT.601 decoder based on a mode label alone.
 
