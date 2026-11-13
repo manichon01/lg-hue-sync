@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- Nanoleaf 4D support: the `nanoleaf` module, pairing and test commands, `/api/pair/nanoleaf`, `/api/nanoleaf/alignment`, the `nanoleaf_*` status and settings fields, the Quadrants and 4D tracer test patterns, and the Home Assistant Nanoleaf entity. Existing `config.json` files that still contain Nanoleaf fields load normally; the fields are dropped on the next save.
+
+### Added
+- TV layout mode (webOS user agent or `?tv=1`): fixed no-scroll dashboard with larger text.
+- Test colour buttons on the Tuning tab; solid test colours pass through the normal colour processing.
+- Live Direct RGB, saturation and brightness controls on the capture patterns page, and a calibration help page (`/calibration-help`).
+- systemd watchdog (`WatchdogSec=60`) so a frozen daemon restarts itself.
+
+### Changed
+- Built-in apps can be captured; the Home screen, the launcher and the Homebrew Channel pause capture, and apps that cannot be captured pause instead of faulting.
+- The daemon's Luna files are named `org.webosbrew.lg-hue-sync.daemon.*` so installing the launcher app no longer overwrites them.
+
+### Fixed
+- Brightness above 1× no longer pushes warm colours towards white.
+
 ## [1.1.0] - 2026-11-03
 
 ### Changed

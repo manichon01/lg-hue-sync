@@ -47,6 +47,5 @@ export function captureLightingState(
     lightsArc:
       running && lightUpdates !== null ? Math.min(100, (lightUpdates / rateScale) * 100) : 0,
     hue: sender(status?.settings?.hue_sync_enabled, status?.hue_connected),
-    nanoleaf: sender(status?.settings?.nanoleaf_sync_enabled, status?.nanoleaf_connected),
   };
 }

@@ -20,7 +20,6 @@ async def async_setup_entry(
     async_add_entities(
         [
             OutputConnection(entry, "hue_connected", "Hue connection"),
-            OutputConnection(entry, "nanoleaf_connected", "Nanoleaf connection"),
         ]
     )
 

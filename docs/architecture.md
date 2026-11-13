@@ -5,8 +5,7 @@
 1. `src/capture/` loads a webOS capture API and publishes the newest downscaled frame.
 2. `src/color/` detects active content, samples Hue zones, and applies bounded colour processing.
 3. `src/hue/` activates the selected Hue v2 Entertainment configuration, establishes DTLS, and streams returned channel IDs.
-4. `src/nanoleaf/` maps perimeter samples to discovered panel IDs and sends UDP frames.
-5. `src/web/` serves the LAN dashboard and configuration API on port 8088.
+4. `src/web/` serves the LAN dashboard and configuration API on port 8088.
 
 `src/setup.rs` owns the pairing and bridge setup commands; `src/main.rs` owns daemon orchestration.
 Existing invalid configuration files stop setup instead of being replaced with defaults.
@@ -44,14 +43,14 @@ retain their RGB/XY encoding and are cleared for stop, layout refresh and reconf
 
 `src/hue/reconnect.rs` serializes Hue activation, DTLS connection and cleanup on a dedicated
 worker. Generation checks discard results superseded by stop, disable or area changes; retries
-do not block Nanoleaf or command processing. DTLS handshakes share a five-second deadline;
+do not block command processing. DTLS handshakes share a five-second deadline;
 Bridge HTTP operations retain their five-second deadline. Shutdown joins the worker after
 invalidating pending connections. One bounded SSE worker subscribes before taking its initial
 snapshot and merges partial updates. Reconnection reconciles ownership and layout; generation
 checks discard old subscriptions. Authoritative deletion or rejected authorization blocks Hue;
 transient event transport errors retry with bounded backoff. Layout changes stop cached output
 before refresh; a failed refresh remains blocked until a successful refresh or area selection.
-Ownership loss suspends Hue without stopping Nanoleaf. Manual Start can retry ownership loss.
+Ownership loss suspends Hue. Manual Start can retry ownership loss.
 Explicit area-refresh requests still run synchronously in the daemon loop.
 
 Hue's application key authorizes HTTPS; the separate application ID from `/auth/v1` identifies
@@ -64,18 +63,14 @@ Adaptive deadband suppresses new colour-update submissions; it does not currentl
 capture or sampling work. Repeats do not resample colours. Pause, layout invalidation and
 shutdown drop this worker before releasing the session. `light_update_fps` measures submitted
 colour updates, not the cached packet repetition rate or physical lamp updates.
-Nanoleaf pairing limits each HTTP request to three seconds or the remaining pairing budget,
-whichever is shorter, including response bodies and the subsequent panel-layout request.
-
-Hue and Nanoleaf sampling share `ColorProcessor` for peak weighting, noise gating, saturation,
+Hue sampling uses `ColorProcessor` for peak weighting, noise gating, saturation,
 gamma, the legacy midtone lift, temporal response, strict black, and scene-change limits.
 Spatial averages, colour transforms, and temporal state retain fractional RGB until output rounding.
 Highlight colour uses an average weighted by the fourth power of encoded-domain luminance,
 instead of selecting one brightest pixel. This keeps bright accents influential without
 switching the entire highlight colour when nearly tied pixels exchange brightness rank.
 Both means and highlights trim the lowest and highest 1% of weighted luminance mass using
-32 fixed bins with proportional boundary-bin retention. Nanoleaf retains narrow perimeter
-regions and the normal response. Identified single-channel Hue fixtures use 1.5-times wider
+32 fixed bins with proportional boundary-bin retention. Identified single-channel Hue fixtures use 1.5-times wider
 footprints with separable Gaussian weights around their saved Hue centres; multi-segment
 gradient channels and legacy/manual rectangles retain their existing geometry. Reported
 Hue rectangles reflect the expanded footprint. Room fixtures smooth brightness and normalised
@@ -120,8 +115,6 @@ bounded exponential-backoff policy so a disconnected device cannot trigger frame
 - Hue app: Entertainment Area membership and physical 3D placement.
 - Hue Bridge API v2: configuration, channel IDs, grouped gradient members, and stream ownership.
 - This daemon: sampling rectangles, processing, output enablement, and reconnection.
-- Nanoleaf controller: token and discovered panel IDs.
-- This daemon: Nanoleaf edge mapping and alignment offset/direction.
 
 Hue v2 may group several physical gradient segments into one Entertainment channel. Preserve that grouping. Dashboard overlays describe daemon sampling; they are not additional Bridge channels.
 
@@ -172,7 +165,7 @@ Colour investigation order:
 1. Compare captured known SDR and HDR colour patches with source values to establish NV12 range, matrix, and transfer behavior on this TV. Keep the current conversion until that evidence supports a change; do not import HyperHDR's large LUT pipeline speculatively.
 2. Compare the same colour step and ramp at 20, 30, and 60 processed frames per second. Require similar wall-clock transition times and preserve strict black and scene-cut limits.
 3. Record capture, processing, and successful-send timings and drops separately before attributing delay. Software timings are not capture-to-light latency; that claim needs a synchronized optical measurement.
-4. Trial float colour storage through sampling and smoothing only if captured data or output shows quantization, banding, or slow-fade instability. Compare output bytes, Hue/Nanoleaf appearance, and ARMv7 CPU use before adopting it.
+4. Trial float colour storage through sampling and smoothing only if captured data or output shows quantization, banding, or slow-fade instability. Compare output bytes, Hue appearance, and ARMv7 CPU use before adopting it.
 
 Keep device-specific geometry and protocols. HyperHDR's USB grabber and direct RGBW dithering do not solve a demonstrated problem in this rooted-TV and controller setup.
 

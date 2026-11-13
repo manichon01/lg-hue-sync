@@ -9,7 +9,6 @@ const status: DiagnosticStatus = {
   light_update_fps: 49.75,
   capture_hardware: true,
   hue_connected: true,
-  nanoleaf_connected: false,
   is_syncing: true,
 };
 
@@ -19,7 +18,6 @@ test('rates remain independent and unavailable receipts never appear live', () =
   expect(live.lightUpdates).toBe(49.75);
   expect(live.captureArc).toBe(50);
   expect(live.hue).toBe('Connected');
-  expect(live.nanoleaf).toBe('Disconnected');
   for (const [receipt, now, online] of [
     [0, 20_500, true],
     [20_000, 30_001, true],

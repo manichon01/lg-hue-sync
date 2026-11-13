@@ -37,7 +37,6 @@ class SyncStatus(TypedDict):
     capture_fps: NotRequired[float]
     light_update_fps: NotRequired[float]
     hue_connected: NotRequired[bool]
-    nanoleaf_connected: NotRequired[bool]
     capture_hardware: NotRequired[bool]
     capture_resolution: NotRequired[str]
     tv_power_state: NotRequired[str]
@@ -113,7 +112,6 @@ async def read_status(session: ClientSession, host: str) -> SyncStatus:
         }
     for key in (
         "hue_connected",
-        "nanoleaf_connected",
         "capture_hardware",
         "preset_modified",
     ):

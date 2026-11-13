@@ -6,7 +6,7 @@ The read-only probe `lg-hue-sync test-capture --raw-nv12-stats --config <config>
 
 The 3840×2160 PNGs are nominal sRGB test stimuli, not light-output measurements. Show each full-screen on the same HDMI input and TV picture mode used for viewing, at 1:1 aspect ratio without player controls. Use the dashboard's live mapping preview to compare a Hue channel's sampling rectangle with the displayed patches; keep the Hue app's physical placements authoritative. Do not edit Hue positions merely to make the preview visually neat.
 
-1. `01-position-grid.png`: identify which screen tiles influence each Hue channel and Nanoleaf edge segment.
+1. `01-position-grid.png`: identify which screen tiles influence each Hue channel.
 2. `02-high-chroma.png`: compare red, green, blue, cyan, magenta, and yellow response. This makes green/yellow confusion easy to spot.
 3. `03-black-and-highlights.png`: check black gating, spill into the left half, near-black response, and isolated highlights. Avoid this pattern if sensitive to high contrast.
 4. `04-neutral-ramp.png`: check visible tint across equal-RGB white/gray levels. White is not a verified 6500 K measurement.

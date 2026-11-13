@@ -4,13 +4,13 @@
   "vendor": "Adeze",
   "type": "web",
   "main": "index.html",
-  "title": "Hue & Nanoleaf Sync",
+  "title": "Hue Sync",
   "icon": "icon80.png",
   "largeIcon": "icon130.png",
   "iconColor": "#6366f1",
   "resolution": "1920x1080",
   "uiRevision": "2",
-  "appDescription": "Philips Hue & Nanoleaf Ambient Lighting Controller",
+  "appDescription": "Philips Hue Ambient Lighting Controller",
   "requiredPermissions": [
     "all"
   ]

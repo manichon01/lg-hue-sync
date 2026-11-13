@@ -68,13 +68,6 @@
             aria-hidden="true"
           ></span>Hue sender <strong>{reading.hue}</strong>
         </p>
-        <p>
-          <span
-            class="dot"
-            data-connected={reading.running && reading.nanoleaf === 'Connected'}
-            aria-hidden="true"
-          ></span>Nanoleaf sender <strong>{reading.nanoleaf}</strong>
-        </p>
       </div>
       <dl class="engine-metadata">
         <div>

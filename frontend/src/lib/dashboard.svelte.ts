@@ -8,7 +8,6 @@ export interface Status extends PreviewStatus, DiagnosticStatus {
   preset_modified: boolean;
   bonjour_enabled: boolean;
   hue_bridge_ip: string;
-  nanoleaf_ip: string;
   calibration_pattern?: string | null;
 }
 export class Dashboard {

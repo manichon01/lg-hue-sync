@@ -34,7 +34,6 @@ export interface PreviewStatus {
   capture_hardware: boolean;
   hue_zones: HueZone[];
   hue_colors: [number, Rgb][];
-  nanoleaf_colors: Rgb[];
 }
 
 export interface PreviewFrame {

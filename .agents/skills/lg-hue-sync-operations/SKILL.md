@@ -9,7 +9,7 @@ Read `AGENTS.md`, then the relevant guide:
 
 - Build/transfer/rollback/uninstall/diagnostics: `docs/operations.md`
 - Version/tag/release: `docs/releasing.md`
-- Hue/Nanoleaf mapping and ownership: `docs/architecture.md`
+- Hue mapping and ownership: `docs/architecture.md`
 
 ## Invariants
 

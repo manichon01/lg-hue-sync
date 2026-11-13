@@ -25,7 +25,6 @@ async def main() -> None:
         "active_preset": "neutral",
         "fps": 30.0,
         "hue_connected": True,
-        "nanoleaf_connected": False,
         "tv_power_state": "active",
         "capture_resolution": "3840x2160",
         "hue_bridge_ip": "192.0.2.1",

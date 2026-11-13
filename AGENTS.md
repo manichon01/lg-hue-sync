@@ -1,6 +1,6 @@
 # lg-hue-sync
 
-Rust daemon and LAN dashboard for screen-derived Philips Hue Entertainment and Nanoleaf 4D output on rooted LG webOS TVs.
+Rust daemon and LAN dashboard for screen-derived Philips Hue Entertainment output on rooted LG webOS TVs.
 
 ## Commands
 
@@ -21,7 +21,7 @@ Rust daemon and LAN dashboard for screen-derived Philips Hue Entertainment and N
 ## Rules
 
 - Maintainer and agent work goes directly to `main`; do not create branches or pull requests unless explicitly requested. External contributors use pull requests.
-- Never commit device IPs, MAC addresses, Hue credentials, Nanoleaf tokens, certificate pins, or populated `config.json` files.
+- Never commit device IPs, MAC addresses, Hue credentials, certificate pins, or populated `config.json` files.
 - A host macOS binary is not deployable. Verify a 32-bit ARM Linux ELF compatible with webOS glibc 2.28.
 - Nix evaluation, host/container checks and ARM builds are separate evidence from a realized Nix shell or TV execution. Retain per-artifact ELF32/little-endian ARM EABI5 soft-float, `/lib/ld-linux.so.3`, and glibc <= 2.28 checks regardless of compiler source.
 - Binary updates preserve `/var/home/root/lg-hue-sync/config.json` and keep a recoverable prior binary.
@@ -29,8 +29,8 @@ Rust daemon and LAN dashboard for screen-derived Philips Hue Entertainment and N
 - Verify deployment with local/remote SHA-256, service state, dashboard status, and—when claimed—physical output.
 - Hue v2 channel IDs and grouped gradient members are authoritative; never invent absent channels.
 - Hue HTTPS must verify both official Hue root CAs and the saved Bridge ID. Legacy pins bootstrap identity only on an exact match; never fall back to HTTP or another bridge after identity/authentication failure.
-- DTLS uses the application ID from `/auth/v1`, not the application key. Never take over or stop another app's stream. Known invalid sessions/layouts must stop cached Hue output without stopping Nanoleaf.
-- Hue and Nanoleaf remain independently controllable. Hue physical placement belongs to the Hue app.
+- DTLS uses the application ID from `/auth/v1`, not the application key. Never take over or stop another app's stream. Known invalid sessions/layouts must stop cached Hue output.
+- Hue physical placement belongs to the Hue app.
 - Known non-HDMI foreground apps/Home must release capture and report `unsupported_source`; resume automatically on HDMI only when source-paused, never after manual Stop. Unknown observations preserve the last known policy; do not classify numeric native errors as DRM.
 - Use the bounded shared `src/luna.rs` query transport; hold stdin open until the reply because this TV's `luna-send` exits on EOF. Bound output/deadlines, kill and reap failed children; never use unbounded `.output()` for Luna calls.
 

@@ -335,7 +335,7 @@ mod tests {
             "brightness_multiplier":1.0,"saturation_boost":1.0,"peak_weight":0.35,
             "gamma":1.0,"noise_gate_threshold":0.0,"use_xy_gamut":false,
             "letterbox_detection":true,"hdr_tone_mapping":false,"hue_sync_enabled":true,
-            "nanoleaf_sync_enabled":true,"max_color_step":12
+            "max_color_step":12
         }))
         .unwrap();
         let mut frame = PreviewFrame {

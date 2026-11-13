@@ -54,16 +54,6 @@ impl RgbColor {
         rgb_to_xy_brightness(self.r, self.g, self.b, gamut)
     }
 
-    /// Converts CIE 1931 xy + brightness to 16-bit integers for HueStream
-    pub fn to_xy_u16(self, gamut: HueGamut) -> (u16, u16, u16) {
-        let xy = self.to_xy_brightness(gamut);
-        (
-            (xy.x * 65535.0).clamp(0.0, 65535.0).round() as u16,
-            (xy.y * 65535.0).clamp(0.0, 65535.0).round() as u16,
-            (xy.brightness * 65535.0).clamp(0.0, 65535.0).round() as u16,
-        )
-    }
-
     /// Scale brightness without desaturating: never push the strongest channel past 255, so a
     /// warm colour does not clip towards white when the multiplier is high.
     pub fn scale_preserving_hue(self, multiplier: f32) -> Self {

@@ -127,54 +127,6 @@ pub fn default_depth_influence() -> f32 {
     0.5
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NanoleafConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    pub ip: String,
-    pub auth_token: String,
-    #[serde(default = "default_nanoleaf_port")]
-    pub udp_port: u16,
-    /// Number of addressable LED segments along the lightstrip (default 30 for 4D strip)
-    #[serde(default = "default_nanoleaf_segments")]
-    pub segments: u16,
-    /// Specific panel IDs retrieved from Nanoleaf layout
-    #[serde(default)]
-    pub panel_ids: Vec<u16>,
-    #[serde(default)]
-    pub alignment: NanoleafAlignment,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct NanoleafAlignment {
-    #[serde(default)]
-    pub start_corner: NanoleafStartCorner,
-    #[serde(default)]
-    pub reverse_direction: bool,
-    #[serde(default)]
-    #[schema(minimum = 0, maximum = 39)]
-    pub perimeter_offset: u8,
-}
-
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum NanoleafStartCorner {
-    #[default]
-    BottomCenter,
-    BottomLeft,
-    TopLeft,
-    TopRight,
-    BottomRight,
-}
-
-fn default_nanoleaf_port() -> u16 {
-    60222
-}
-
-fn default_nanoleaf_segments() -> u16 {
-    30
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PresetTuning {
     pub brightness_multiplier: f32,
@@ -225,11 +177,6 @@ pub struct Config {
     /// V2 entertainment configuration UUID embedded in HueStream packets.
     #[serde(default)]
     pub entertainment_configuration_id: Option<String>,
-    #[serde(default)]
-    pub nanoleaf: Option<NanoleafConfig>,
-    /// Runtime preference: stop sending Nanoleaf UDP frames when off.
-    #[serde(default = "default_true")]
-    pub nanoleaf_sync_enabled: bool,
     #[serde(default = "default_fps")]
     pub fps: u32,
     #[serde(default = "default_brightness")]
@@ -237,9 +184,6 @@ pub struct Config {
     /// Independent final output trim for Hue Entertainment lights.
     #[serde(default = "default_output_trim")]
     pub hue_output_brightness: f32,
-    /// Independent final output trim for the Nanoleaf 4D perimeter.
-    #[serde(default = "default_output_trim")]
-    pub nanoleaf_output_brightness: f32,
     #[serde(default = "default_false")]
     pub use_xy_gamut: bool,
     #[serde(default = "default_true")]
@@ -462,12 +406,9 @@ impl Config {
             hue_bridge_certificate_sha256: None,
             entertainment_area_id: area_id.to_string(),
             entertainment_configuration_id: None,
-            nanoleaf: None,
-            nanoleaf_sync_enabled: true,
             fps: default_fps(),
             brightness_multiplier: 1.0,
             hue_output_brightness: default_output_trim(),
-            nanoleaf_output_brightness: default_output_trim(),
             use_xy_gamut: false,
             hdr_tone_mapping: false,
             letterbox_detection: true,
@@ -687,7 +628,6 @@ mod tests {
             "fixture-area",
         );
         initial.hue_output_brightness = 0.75;
-        initial.nanoleaf_output_brightness = 1.25;
         initial.bonjour_enabled = true;
         Config::update(&path, Some(initial), |_| Ok(())).unwrap();
         let tuning = PresetTuning {
@@ -724,13 +664,7 @@ mod tests {
         assert_eq!(loaded.clientkey, "fixture-client-key");
         assert_eq!(loaded.bridge_ip, "fixture-bridge");
         assert_eq!(loaded.entertainment_area_id, "fixture-area");
-        assert_eq!(
-            (
-                loaded.hue_output_brightness,
-                loaded.nanoleaf_output_brightness
-            ),
-            (0.75, 1.25)
-        );
+        assert_eq!(loaded.hue_output_brightness, 0.75);
         assert!(loaded.bonjour_enabled);
         let _ = fs::remove_file(&path);
         let _ = fs::remove_file(path.with_extension("json.lock"));

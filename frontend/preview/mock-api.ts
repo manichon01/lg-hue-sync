@@ -96,9 +96,7 @@ export function mockApi(): Plugin {
     is_syncing: running && display,
     capture_hardware: running && display,
     hue_connected: running && display,
-    nanoleaf_connected: running && display,
     hue_bridge_ip: 'demo.bridge',
-    nanoleaf_ip: 'demo.nanoleaf',
     fps: 60,
     light_update_fps: 50,
     capture_resolution: '320x180',
@@ -109,7 +107,6 @@ export function mockApi(): Plugin {
       ...demoSamplingBounds(demo_position, settings.depth_influence),
     })),
     hue_colors: zones.map((zone) => [zone.channel_id, color(zone.channel_id)]),
-    nanoleaf_colors: Array.from({ length: 40 }, (_, i) => color(i)),
     diagnostics: {
       sampled_unix_ms: Date.now(),
       genre: {
@@ -232,8 +229,6 @@ export function mockApi(): Plugin {
               areas: [{ id: 'demo-area', name: 'Preview Entertainment Area' }],
               selected_area_id: 'demo-area',
             };
-          else if (path === '/api/nanoleaf/alignment')
-            settings = { ...settings, nanoleaf_alignment: body };
           else if (path === '/api/preview/frame') {
             if (!running || !display) {
               res.statusCode = 409;

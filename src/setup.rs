@@ -1,5 +1,5 @@
-use crate::config::{Config, NanoleafAlignment, NanoleafConfig};
-use crate::{hue, nanoleaf};
+use crate::config::Config;
+use crate::hue;
 use anyhow::Result;
 use std::path::PathBuf;
 use tracing::info;
@@ -99,51 +99,6 @@ pub(crate) async fn run_sync_hue(config_path: PathBuf, target_area: Option<Strin
         config_path
     );
     println!("    3D light positions have been refreshed and projected to screen sampling boxes.");
-    Ok(())
-}
-
-pub(crate) async fn run_pair_nanoleaf(ip_opt: Option<String>, config_path: PathBuf) -> Result<()> {
-    let ip = match ip_opt {
-        Some(ip) => ip,
-        None => {
-            use std::io::{stdin, stdout, Write};
-            print!("Enter Nanoleaf 4D IP address: ");
-            stdout().flush().ok();
-            let mut line = String::new();
-            stdin().read_line(&mut line)?;
-            line.trim().to_string()
-        }
-    };
-
-    let (auth_token, num_panels, panel_ids) = nanoleaf::pair_nanoleaf(&ip, 45)?;
-    Config::update(
-        &config_path,
-        Some(Config::new_default("", "", "", "")),
-        |config| {
-            config.nanoleaf = Some(NanoleafConfig {
-                enabled: true,
-                ip: ip.clone(),
-                auth_token,
-                udp_port: 60222,
-                segments: num_panels.max(30),
-                panel_ids,
-                alignment: NanoleafAlignment::default(),
-            });
-            Ok(())
-        },
-    )?;
-    println!(
-        "\n[+] Nanoleaf 4D controller at {} successfully paired and saved to {:?}",
-        ip, config_path
-    );
-    println!(
-        "    You can test it with: lg-hue-sync test-nanoleaf --config {:?}",
-        config_path
-    );
-    println!(
-        "    Run live sync with:   lg-hue-sync run --config {:?}",
-        config_path
-    );
     Ok(())
 }
 

@@ -4,4 +4,4 @@ pub(crate) mod sampling;
 pub mod zones;
 
 pub use gamut::HueGamut;
-pub use zones::{ActiveRect, ColorProcessor, RgbColor, ZoneSampler};
+pub use zones::{ColorProcessor, RgbColor, ZoneSampler};

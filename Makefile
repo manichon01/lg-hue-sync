@@ -59,7 +59,7 @@ help:
 	@printf "  $(GREEN)make deps-check$(RESET)    Report available compatible dependency updates\n"
 	@printf "  $(GREEN)make deps-update$(RESET)   Update Cargo.lock within Cargo.toml constraints\n"
 	@printf "  $(GREEN)make release-check$(RESET) Validate version metadata before tagging\n"
-	@printf "  $(GREEN)make test-pattern$(RESET)  Run local rainbow test pattern across Hue and Nanoleaf (Mac -> Lights)\n"
+	@printf "  $(GREEN)make test-pattern$(RESET)  Run local rainbow test pattern across Hue (Mac -> Lights)\n"
 	@printf "  $(GREEN)make test-capture$(RESET)  Run vtcapture HDMI screen capture probe directly on TV over SSH\n\n"
 	@printf "$(CYAN)Deployment (TV IP: $(TV_IP)):$(RESET)\n"
 	@printf "  $(GREEN)make deploy$(RESET)        Full deployment: build, upload binary & config, configure systemd/init.d, start\n"
@@ -161,7 +161,7 @@ deps-update:
 release-check:
 	python3 scripts/check_release.py
 
-## run live test pattern locally from Mac against Hue and Nanoleaf
+## run live test pattern locally from Mac against Hue
 test-pattern:
 	@printf "$(CYAN)[*] Running rainbow test pattern on local Mac...$(RESET)\n"
 	cargo run -- test-pattern --config config.json

@@ -2,8 +2,8 @@ use super::diagnostics::{self, Diagnostics};
 use super::preview::{self, PreviewFrame, PreviewState};
 use crate::{
     color::RgbColor,
-    config::{Config, LightZone, NanoleafAlignment, NanoleafConfig, PresetTuning},
-    hue, nanoleaf,
+    config::{Config, LightZone, PresetTuning},
+    hue,
 };
 use axum::{
     extract::{DefaultBodyLimit, Path, Query, State},
@@ -48,9 +48,6 @@ pub struct LiveSettings {
     #[serde(default = "default_output_trim")]
     #[schema(minimum = 0, maximum = 2.5, default = 1.0)]
     pub hue_output_brightness: f32,
-    #[serde(default = "default_output_trim")]
-    #[schema(minimum = 0, maximum = 2.5, default = 1.0)]
-    pub nanoleaf_output_brightness: f32,
     #[schema(minimum = 0.5, maximum = 2.5)]
     pub saturation_boost: f32,
     #[schema(minimum = 0, maximum = 1)]
@@ -91,12 +88,9 @@ pub struct LiveSettings {
     pub letterbox_detection: bool,
     pub hdr_tone_mapping: bool,
     pub hue_sync_enabled: bool,
-    pub nanoleaf_sync_enabled: bool,
     #[serde(default = "default_true")]
     #[schema(default = true)]
     pub auto_tv_power: bool,
-    #[serde(default)]
-    pub nanoleaf_alignment: NanoleafAlignment,
     #[schema(minimum = 4, maximum = 64)]
     pub max_color_step: u8,
 }
@@ -125,12 +119,6 @@ impl LiveSettings {
             (
                 "hue_output_brightness",
                 self.hue_output_brightness,
-                0.0,
-                2.5,
-            ),
-            (
-                "nanoleaf_output_brightness",
-                self.nanoleaf_output_brightness,
                 0.0,
                 2.5,
             ),
@@ -169,11 +157,6 @@ impl LiveSettings {
         if !(4..=64).contains(&self.max_color_step) {
             return Err(ApiError::BadRequest(
                 "max_color_step must be between 4 and 64".to_string(),
-            ));
-        }
-        if self.nanoleaf_alignment.perimeter_offset >= 40 {
-            return Err(ApiError::BadRequest(
-                "Nanoleaf perimeter offset must be between 0 and 39".to_string(),
             ));
         }
         Ok(())
@@ -292,8 +275,6 @@ pub enum CalibrationPattern {
     White,
     WarmWhite,
     DaylightWhite,
-    Quadrants,
-    Perimeter,
 }
 
 impl CalibrationPattern {
@@ -305,8 +286,6 @@ impl CalibrationPattern {
             "white" => Self::White,
             "warm-white" => Self::WarmWhite,
             "daylight-white" => Self::DaylightWhite,
-            "quadrants" => Self::Quadrants,
-            "perimeter" => Self::Perimeter,
             "off" => return Some(None),
             _ => return None,
         };
@@ -321,8 +300,6 @@ impl CalibrationPattern {
             Self::White => "white",
             Self::WarmWhite => "warm-white",
             Self::DaylightWhite => "daylight-white",
-            Self::Quadrants => "quadrants",
-            Self::Perimeter => "perimeter",
         }
     }
 }
@@ -377,9 +354,7 @@ pub struct SharedState {
     /// Successful light-output updates measured over the preceding second.
     pub light_updates_x100: AtomicU32,
     pub hue_bridge_ip: RwLock<String>,
-    pub nanoleaf_ip: RwLock<String>,
     pub hue_connected: AtomicBool,
-    pub nanoleaf_connected: AtomicBool,
     pub capture_hardware: AtomicBool,
     /// 0 = unknown, 1 = active, 2 = standby/off.
     pub tv_power_state: AtomicU32,
@@ -387,7 +362,6 @@ pub struct SharedState {
     pub current_settings: RwLock<LiveSettings>,
     settings_update_lock: Mutex<()>,
     pub live_hue_colors: RwLock<Vec<(u8, RgbColor)>>,
-    pub live_nanoleaf_colors: RwLock<Vec<RgbColor>>,
     pub hue_zones: RwLock<Vec<LightZone>>,
     pub calibration_pattern: RwLock<Option<CalibrationPattern>>,
 }
@@ -396,7 +370,6 @@ impl SharedState {
     pub fn new(
         initial_settings: LiveSettings,
         hue_bridge_ip: String,
-        nanoleaf_ip: String,
         capture_res: String,
         hue_zones: Vec<LightZone>,
         command_tx: mpsc::Sender<ControlCommand>,
@@ -424,16 +397,13 @@ impl SharedState {
             fps_x100: AtomicU32::new(6000),
             light_updates_x100: AtomicU32::new(0),
             hue_bridge_ip: RwLock::new(hue_bridge_ip),
-            nanoleaf_ip: RwLock::new(nanoleaf_ip),
             hue_connected: AtomicBool::new(false),
-            nanoleaf_connected: AtomicBool::new(false),
             capture_hardware: AtomicBool::new(false),
             tv_power_state: AtomicU32::new(0),
             capture_resolution: RwLock::new(capture_res),
             current_settings: RwLock::new(initial_settings),
             settings_update_lock: Mutex::new(()),
             live_hue_colors: RwLock::new(Vec::new()),
-            live_nanoleaf_colors: RwLock::new(Vec::new()),
             hue_zones: RwLock::new(hue_zones),
             calibration_pattern: RwLock::new(None),
         }
@@ -636,13 +606,10 @@ struct StatusResponse {
     light_update_fps: f32,
     hue_connected: bool,
     hue_bridge_ip: String,
-    nanoleaf_connected: bool,
-    nanoleaf_ip: String,
     capture_hardware: bool,
     capture_resolution: String,
     settings: LiveSettings,
     visualization_modes: VisualizationModes,
-    nanoleaf_colors: Vec<RgbColor>,
     hue_colors: Vec<(u8, RgbColor)>,
     hue_zones: Vec<LightZone>,
     calibration_pattern: Option<&'static str>,
@@ -695,7 +662,7 @@ struct HueAreasResponse {
 
 #[derive(Deserialize, ToSchema)]
 struct PairRequest {
-    /// Device IP; omitted or blank enables Hue discovery. Required for Nanoleaf.
+    /// Device IP; omitted or blank enables Hue discovery.
     ip: Option<String>,
 }
 
@@ -813,14 +780,12 @@ fn build_router(state: AppState) -> anyhow::Result<Router> {
         .routes(routes!(set_visualization_mode))
         .routes(routes!(apply_preset))
         .routes(routes!(reset_preset))
-        .routes(routes!(update_nanoleaf_alignment))
         .routes(routes!(hue_areas))
         .routes(routes!(select_hue_area))
         .routes(routes!(save_config))
         .routes(routes!(restart))
         .routes(routes!(sync_bridge))
         .routes(routes!(pair_hue))
-        .routes(routes!(pair_nanoleaf))
         .routes(routes!(test_pattern))
         .split_for_parts();
     document.info.title = "LG Hue Sync HTTP API".to_string();
@@ -1191,13 +1156,10 @@ async fn status(State(state): State<AppState>) -> Json<StatusResponse> {
         light_update_fps: shared.light_update_fps(),
         hue_connected: shared.hue_connected.load(Ordering::Relaxed),
         hue_bridge_ip: shared.hue_bridge_ip.read().unwrap().clone(),
-        nanoleaf_connected: shared.nanoleaf_connected.load(Ordering::Relaxed),
-        nanoleaf_ip: shared.nanoleaf_ip.read().unwrap().clone(),
         capture_hardware: shared.capture_hardware.load(Ordering::Relaxed),
         capture_resolution: shared.capture_resolution.read().unwrap().clone(),
         visualization_modes: VisualizationModes::from_settings(&settings),
         settings,
-        nanoleaf_colors: shared.live_nanoleaf_colors.read().unwrap().clone(),
         hue_colors: shared.live_hue_colors.read().unwrap().clone(),
         hue_zones: shared.hue_zones.read().unwrap().clone(),
         calibration_pattern: shared
@@ -1467,50 +1429,6 @@ async fn reset_preset(
     Ok(Json(StatusMessage { status: "reset" }))
 }
 
-/// Save Nanoleaf alignment, then apply live settings.
-#[utoipa::path(
-    post, path = "/api/nanoleaf/alignment", tag = "LG Hue Sync",
-    request_body = NanoleafAlignment,
-    responses(
-        (status = 200, description = "Success", body = StatusMessage),
-        (status = 400, description = "Invalid request", content((ErrorResponse = "application/json"), (String = "text/plain"))),
-        (status = 413, description = "Request body exceeds the 512 KiB limit", body = String, content_type = "text/plain"),
-        (status = 415, description = "JSON content type required", body = String, content_type = "text/plain"),
-        (status = 422, description = "Invalid JSON fields or types", body = String, content_type = "text/plain"),
-        (status = 502, description = "Controller, device or configuration operation failed", body = ErrorResponse)
-    )
-)]
-async fn update_nanoleaf_alignment(
-    State(state): State<AppState>,
-    Json(alignment): Json<NanoleafAlignment>,
-) -> Result<Json<StatusMessage>, ApiError> {
-    if alignment.perimeter_offset >= 40 {
-        return Err(ApiError::BadRequest(
-            "Nanoleaf perimeter offset must be between 0 and 39".to_string(),
-        ));
-    }
-    let config_path = state.config_path.clone();
-    tokio::task::spawn_blocking(move || {
-        Config::update(&config_path, None, |config| {
-            let nanoleaf = config.nanoleaf.as_mut().ok_or_else(|| {
-                anyhow::anyhow!("Pair a Nanoleaf 4D before applying its alignment")
-            })?;
-            nanoleaf.alignment = alignment;
-            Ok(())
-        })
-        .map(|_| ())
-        .map_err(|error| error.to_string())
-    })
-    .await
-    .map_err(|error| ApiError::SetupFailed(format!("Nanoleaf alignment task failed: {error}")))?
-    .map_err(ApiError::SetupFailed)?;
-    state
-        .shared
-        .update_settings(|settings| settings.nanoleaf_alignment = alignment)
-        .await?;
-    Ok(Json(StatusMessage { status: "saved" }))
-}
-
 /// Save current configuration; wait up to five seconds for acknowledgement.
 #[utoipa::path(
     post, path = "/api/save-config", tag = "LG Hue Sync",
@@ -1669,7 +1587,7 @@ async fn select_hue_area(
 /// Select a live calibration pattern, or off for normal capture.
 #[utoipa::path(
     post, path = "/api/test-pattern/{pattern}", tag = "LG Hue Sync",
-    params(("pattern" = String, Path, pattern = "^(red|green|blue|white|warm-white|daylight-white|quadrants|perimeter|off)$")),
+    params(("pattern" = String, Path, pattern = "^(red|green|blue|white|warm-white|daylight-white|off)$")),
     responses(
         (status = 200, description = "Success", body = StatusMessage),
         (status = 400, description = "Invalid request", content((ErrorResponse = "application/json"), (String = "text/plain")))
@@ -1726,62 +1644,6 @@ async fn pair_hue(
     .await
     .map_err(|error| ApiError::SetupFailed(format!("Hue pairing task failed: {error}")))?;
     result.map_err(ApiError::SetupFailed)?;
-    state
-        .shared
-        .send_command(ControlCommand::Reconfigure)
-        .await?;
-    Ok(Json(StatusMessage { status: "paired" }))
-}
-
-/// Pair Nanoleaf (45-second pairing window), save credentials and queue reconfiguration.
-#[utoipa::path(
-    post, path = "/api/pair/nanoleaf", tag = "LG Hue Sync",
-    request_body = PairRequest,
-    responses(
-        (status = 200, description = "Success", body = StatusMessage),
-        (status = 400, description = "Invalid request", content((ErrorResponse = "application/json"), (String = "text/plain"))),
-        (status = 413, description = "Request body exceeds the 512 KiB limit", body = String, content_type = "text/plain"),
-        (status = 415, description = "JSON content type required", body = String, content_type = "text/plain"),
-        (status = 422, description = "Invalid JSON fields or types", body = String, content_type = "text/plain"),
-        (status = 502, description = "Controller, device or configuration operation failed", body = ErrorResponse)
-    )
-)]
-async fn pair_nanoleaf(
-    State(state): State<AppState>,
-    Json(request): Json<PairRequest>,
-) -> Result<Json<StatusMessage>, ApiError> {
-    let ip = request
-        .ip
-        .ok_or_else(|| ApiError::BadRequest("Nanoleaf controller IP is required".to_string()))?;
-    let config_path = state.config_path.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        let ip = validate_device_ip(&ip)?;
-        let (auth_token, segments, panel_ids) =
-            nanoleaf::pair_nanoleaf(&ip, 45).map_err(|error| error.to_string())?;
-        Config::update(
-            &config_path,
-            Some(Config::new_default("", "", "", "")),
-            |config| {
-                config.nanoleaf = Some(NanoleafConfig {
-                    enabled: true,
-                    ip: ip.clone(),
-                    auth_token,
-                    udp_port: 60222,
-                    segments: segments.max(30),
-                    panel_ids,
-                    alignment: NanoleafAlignment::default(),
-                });
-                config.nanoleaf_sync_enabled = true;
-                Ok(())
-            },
-        )
-        .map_err(|error| error.to_string())?;
-        Ok::<_, String>(ip)
-    })
-    .await
-    .map_err(|error| ApiError::SetupFailed(format!("Nanoleaf pairing task failed: {error}")))?;
-    let ip = result.map_err(ApiError::SetupFailed)?;
-    *state.shared.nanoleaf_ip.write().unwrap() = ip;
     state
         .shared
         .send_command(ControlCommand::Reconfigure)
@@ -1863,7 +1725,6 @@ mod tests {
         LiveSettings {
             brightness_multiplier: 1.0,
             hue_output_brightness: 1.0,
-            nanoleaf_output_brightness: 1.0,
             saturation_boost: 1.5,
             peak_weight: 0.35,
             spatial_blend: 0.0,
@@ -1880,9 +1741,7 @@ mod tests {
             letterbox_detection: true,
             hdr_tone_mapping: false,
             hue_sync_enabled: true,
-            nanoleaf_sync_enabled: true,
             auto_tv_power: true,
-            nanoleaf_alignment: NanoleafAlignment::default(),
             max_color_step: 12,
         }
     }
@@ -1891,7 +1750,6 @@ mod tests {
         let (sender, receiver) = mpsc::channel(8);
         let shared = Arc::new(SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -1971,7 +1829,6 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let shared = Arc::new(SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2075,7 +1932,6 @@ mod tests {
             settings(),
             String::new(),
             String::new(),
-            String::new(),
             Vec::new(),
             sender,
         ));
@@ -2132,7 +1988,6 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let shared = Arc::new(SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2207,7 +2062,6 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let shared = Arc::new(SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2308,7 +2162,6 @@ mod tests {
             settings(),
             String::new(),
             String::new(),
-            String::new(),
             Vec::new(),
             sender,
         ));
@@ -2341,7 +2194,6 @@ mod tests {
         let state = AppState {
             shared: Arc::new(SharedState::new(
                 settings(),
-                String::new(),
                 String::new(),
                 String::new(),
                 Vec::new(),
@@ -2377,7 +2229,6 @@ mod tests {
         let state = AppState {
             shared: Arc::new(SharedState::new(
                 settings(),
-                String::new(),
                 String::new(),
                 String::new(),
                 Vec::new(),
@@ -2423,7 +2274,7 @@ mod tests {
         let document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(document["info"]["version"], env!("CARGO_PKG_VERSION"));
         let paths = document["paths"].as_object().unwrap();
-        assert_eq!(paths.len(), 24);
+        assert_eq!(paths.len(), 22);
         for (path, method) in [
             ("/api/status", "get"),
             ("/api/display", "get"),
@@ -2440,14 +2291,12 @@ mod tests {
             ("/api/visualization/{axis}/{mode}", "post"),
             ("/api/presets/{name}", "post"),
             ("/api/presets/{name}/reset", "post"),
-            ("/api/nanoleaf/alignment", "post"),
             ("/api/hue/areas", "get"),
             ("/api/hue/area", "post"),
             ("/api/save-config", "post"),
             ("/api/restart", "post"),
             ("/api/sync-bridge", "post"),
             ("/api/pair/hue", "post"),
-            ("/api/pair/nanoleaf", "post"),
             ("/api/test-pattern/{pattern}", "post"),
         ] {
             assert!(paths[path].get(method).is_some(), "{method} {path}");
@@ -2467,10 +2316,6 @@ mod tests {
             .as_array()
             .unwrap()
             .contains(&serde_json::json!("auto_tv_power")));
-        assert_eq!(
-            schemas["NanoleafAlignment"]["properties"]["perimeter_offset"]["maximum"],
-            39
-        );
         assert_eq!(live["properties"]["auto_tv_power"]["default"], true);
         let status_parts = schemas["StatusResponse"]["allOf"].as_array().unwrap();
         assert!(status_parts
@@ -2486,7 +2331,6 @@ mod tests {
         assert_eq!(hue_pair["prefixItems"][1]["type"], "object");
         assert_eq!(hue_pair["items"], false);
         assert!(schemas.get("Config").is_none());
-        assert!(schemas.get("NanoleafConfig").is_none());
         assert_eq!(schemas["SyncState"]["enum"][0], "starting");
         assert!(schemas.get("Diagnostics").is_some());
         let response = app
@@ -2512,10 +2356,8 @@ mod tests {
     fn coarse_tuning_range_extremes_validate() {
         let mut settings = settings();
         settings.hue_output_brightness = 0.0;
-        settings.nanoleaf_output_brightness = 2.5;
         assert!(settings.validate().is_ok());
         settings.hue_output_brightness = 2.5;
-        settings.nanoleaf_output_brightness = 0.0;
         settings.saturation_boost = 0.5;
         settings.gamma = 0.5;
         settings.peak_weight = 1.0;
@@ -2600,7 +2442,6 @@ mod tests {
         let (sender, _receiver) = mpsc::channel(1);
         let shared = SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2734,8 +2575,6 @@ mod tests {
         input.gamma = -1.0;
         assert!(matches!(input.validate(), Err(ApiError::BadRequest(_))));
         input.gamma = 1.0;
-        input.nanoleaf_alignment.perimeter_offset = 40;
-        assert!(matches!(input.validate(), Err(ApiError::BadRequest(_))));
     }
 
     #[test]
@@ -2755,9 +2594,7 @@ mod tests {
         }
         let mut input = settings();
         input.hue_output_brightness = 0.7;
-        input.nanoleaf_output_brightness = 0.8;
         input.hue_sync_enabled = false;
-        input.nanoleaf_alignment.perimeter_offset = 7;
         input.spatial_blend = 0.25;
         Preset::named("neonContrast").unwrap().apply(&mut input);
         assert_eq!(input.saturation_boost, 2.0);
@@ -2765,9 +2602,7 @@ mod tests {
         assert_eq!(input.rise_smoothing_factor, 0.35);
         assert!(input.strict_blackout);
         assert_eq!(input.hue_output_brightness, 0.7);
-        assert_eq!(input.nanoleaf_output_brightness, 0.8);
         assert!(!input.hue_sync_enabled);
-        assert_eq!(input.nanoleaf_alignment.perimeter_offset, 7);
         assert!(input.validate().is_ok());
         assert!(Preset::named("unknown").is_err());
     }
@@ -2777,7 +2612,6 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let shared = Arc::new(SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2830,7 +2664,6 @@ mod tests {
             settings(),
             String::new(),
             String::new(),
-            String::new(),
             Vec::new(),
             sender,
         ));
@@ -2857,7 +2690,6 @@ mod tests {
         sender.send(ControlCommand::Restart).await.unwrap();
         let shared = SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2899,7 +2731,6 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(8);
         let shared = SharedState::new(
             settings(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -2961,7 +2792,6 @@ mod tests {
         initial.hue_output_brightness = 0.7;
         let shared = Arc::new(SharedState::new(
             initial,
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),
@@ -3047,7 +2877,6 @@ mod tests {
             settings(),
             String::new(),
             String::new(),
-            String::new(),
             Vec::new(),
             sender,
         ));
@@ -3079,7 +2908,6 @@ mod tests {
         let original = settings();
         let shared = SharedState::new(
             original.clone(),
-            String::new(),
             String::new(),
             String::new(),
             Vec::new(),

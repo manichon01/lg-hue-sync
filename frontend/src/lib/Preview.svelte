@@ -33,26 +33,6 @@
   const supported = $derived(
     status?.pipeline_state === 'running' && status.capture_hardware === true,
   );
-  const edges = $derived([
-    {
-      name: 'top',
-      colors: Array.from({ length: 13 }, (_, index) => status?.nanoleaf_colors?.[16 + index]),
-    },
-    {
-      name: 'right',
-      colors: Array.from({ length: 7 }, (_, index) => status?.nanoleaf_colors?.[29 + index]),
-    },
-    {
-      name: 'bottom',
-      colors: Array.from({ length: 13 }, (_, index) =>
-        index < 7 ? status?.nanoleaf_colors?.[7 - index] : status?.nanoleaf_colors?.[46 - index],
-      ),
-    },
-    {
-      name: 'left',
-      colors: Array.from({ length: 7 }, (_, index) => status?.nanoleaf_colors?.[15 - index]),
-    },
-  ]);
   $effect(() => {
     controller.update(settings, active && visible, supported);
   });
@@ -128,13 +108,6 @@
           </div>
         {/each}
       </div>
-      {#each edges as edge (edge.name)}
-        <div class={`edge edge-${edge.name}`} aria-hidden="true">
-          {#each edge.colors as color, index (`${edge.name}-${index}`)}<span
-              style:background={rgbCss(color)}
-            ></span>{/each}
-        </div>
-      {/each}
     {/if}
   </div>
   <div class="preview-actions">
@@ -284,37 +257,6 @@
     block-size: 40px;
     max-inline-size: 100%;
     max-block-size: 100%;
-  }
-  .edge {
-    position: absolute;
-    display: flex;
-    pointer-events: none;
-  }
-  .edge-top,
-  .edge-bottom {
-    inset-inline: 0;
-    block-size: 8px;
-  }
-  .edge-top {
-    inset-block-start: 0;
-  }
-  .edge-bottom {
-    inset-block-end: 0;
-  }
-  .edge-left,
-  .edge-right {
-    inset-block: 0;
-    inline-size: 8px;
-    flex-direction: column;
-  }
-  .edge-left {
-    inset-inline-start: 0;
-  }
-  .edge-right {
-    inset-inline-end: 0;
-  }
-  .edge span {
-    flex: 1;
   }
   .preview-actions {
     flex-wrap: wrap;

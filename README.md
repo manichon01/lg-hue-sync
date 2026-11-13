@@ -5,14 +5,13 @@
 [![webOS](https://img.shields.io/badge/webOS-rooted%205%2F6-blue.svg)](https://www.webosbrew.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Native ambient-light synchronization for rooted LG webOS TVs. A Rust daemon captures the displayed image, derives spatial colours, and streams them to Philips Hue Entertainment and Nanoleaf 4D. A responsive LAN dashboard provides pairing, calibration, presets, and independent output controls.
+Native ambient-light synchronization for rooted LG webOS TVs. A Rust daemon captures the displayed image, derives spatial colours, and streams them to Philips Hue Entertainment. A responsive LAN dashboard provides pairing, calibration, presets, and independent output controls.
 
 ## Features
 
 - Root-only webOS capture through dynamically loaded `libvtcapture`/`dile_vt` APIs.
 - Hue Entertainment API v2 over DTLS 1.2 PSK, including gradient member identity.
-- Nanoleaf 4D UDP streaming with 40-panel corner, direction, and offset alignment.
-- Independent Hue/Nanoleaf controls; TV sleep/wake following can be automatic or manual.
+- TV sleep/wake following can be automatic or manual.
 - Letterbox-aware sampling, an optional legacy midtone lift, OLED black gating, smoothing, and bounded scene changes.
 - Responsive dashboard at `http://<tv-ip>:8088/` with system, dark, and light themes.
 
@@ -29,7 +28,7 @@ Check [cani.rootmy.tv](https://cani.rootmy.tv/) and [webOS Brew](https://github.
 
 - Development Mac with Rust/rustup, [cargo-nextest](https://nexte.st/docs/installation/pre-built-binaries/), webOS Brew native SDK, `make`, SSH, and `uv`. Docker is needed for one-time sysroot setup or the explicit fallback.
 - Rooted webOS TV with root SSH and compatible capture libraries.
-- Hue Bridge v2 and/or Nanoleaf 4D on the same LAN.
+- Hue Bridge v2 on the same LAN.
 
 ## Validate and build
 
@@ -59,7 +58,7 @@ Home Assistant exposes **Screen sync**, **Display** (panel on/off), **Color pres
 
 Keep the TV's unauthenticated port 8088 on a trusted LAN. The [manual YAML package](integrations/home-assistant/README.md) remains available as an alternative. Remove it if you switch to HACS to avoid duplicate controls.
 
-Home Assistant also exposes Hue and Nanoleaf connection sensors, TV power state, and capture resolution when reported. The **Response** and **Spatial blending** selectors require a TV build with `visualization_modes` in `GET /api/status`. Each selector applies one live mode. For custom dashboard values, the selector has no selected option until a named mode is chosen.
+Home Assistant also exposes a Hue connection sensor, TV power state, and capture resolution when reported. The **Response** and **Spatial blending** selectors require a TV build with `visualization_modes` in `GET /api/status`. Each selector applies one live mode. For custom dashboard values, the selector has no selected option until a named mode is chosen.
 
 ## Install and update
 
@@ -85,10 +84,8 @@ Build, rollback, uninstall, and verification details: [docs/operations.md](docs/
 
 ```bash
 cargo run -- pair --bridge <bridge-ip> --output config.json
-cargo run -- pair-nanoleaf --ip <controller-ip> --config config.json
 cargo run -- sync-hue --config config.json
 cargo run -- test-pattern --config config.json
-cargo run -- test-nanoleaf --config config.json
 cargo run -- run --config config.json
 ```
 
@@ -109,12 +106,12 @@ Start from [config.example.json](config.example.json), or pair through the dashb
 /var/home/root/lg-hue-sync/config.json
 ```
 
-Hue HTTPS validates the two official Hue root CAs and the saved Bridge ID. Existing certificate pins bootstrap that identity only on an exact match; subsequent signed certificate renewal retains the identity check. Pairing never falls back to HTTP. Status endpoints never return Hue or Nanoleaf secrets.
+Hue HTTPS validates the two official Hue root CAs and the saved Bridge ID. Existing certificate pins bootstrap that identity only on an exact match; subsequent signed certificate renewal retains the identity check. Pairing never falls back to HTTP. Status endpoints never return Hue secrets.
 
 ## Project layout
 
 ```text
-src/                 daemon, capture, colour, Hue, Nanoleaf, dashboard
+src/                 daemon, capture, colour, Hue, dashboard
 webos-app/           optional launcher/dashboard package
 scripts/             build, provisioning, deployment, maintenance
 docs/                architecture, operations, release runbooks

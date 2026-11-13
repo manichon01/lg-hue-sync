@@ -102,7 +102,7 @@ ssh $SSH_OPTS root@"$TV_IP" bash << 'REMOTEEOC'
 set -e
 cat << 'EOF' > /var/home/root/lg-hue-sync/lg-hue-sync.service
 [Unit]
-Description=LG C1 Native Philips Hue & Nanoleaf Sync Daemon
+Description=LG C1 Native Philips Hue Sync Daemon
 After=network.target
 Conflicts=sleep.target suspend.target
 

@@ -29,7 +29,6 @@ export function registerAgentTools(model: Dashboard) {
           captureFps: s?.fps,
           lightUpdateFps: s?.light_update_fps,
           hueConnected: s?.hue_connected,
-          nanoleafConnected: s?.nanoleaf_connected,
         };
       },
     },
@@ -60,18 +59,18 @@ export function registerAgentTools(model: Dashboard) {
     {
       name: 'set_sync_output',
       title: 'Enable or disable a sync output',
-      description: 'Change screen, Hue or Nanoleaf output after user confirmation.',
+      description: 'Change screen or Hue output after user confirmation.',
       inputSchema: {
         type: 'object',
         properties: {
-          output: { type: 'string', enum: ['screen', 'hue', 'nanoleaf'] },
+          output: { type: 'string', enum: ['screen', 'hue'] },
           enabled: { type: 'boolean' },
         },
         required: ['output', 'enabled'],
       },
       annotations: { readOnlyHint: false, consequentialHint: true },
       execute: async ({ output, enabled }) => {
-        if (!['screen', 'hue', 'nanoleaf'].includes(String(output)) || typeof enabled !== 'boolean')
+        if (!['screen', 'hue'].includes(String(output)) || typeof enabled !== 'boolean')
           throw Error('Invalid output');
         if (!confirm(`${enabled ? 'Enable' : 'Disable'} ${output} sync?`))
           return { changed: false, cancelled: true };
@@ -79,9 +78,7 @@ export function registerAgentTools(model: Dashboard) {
         else {
           if (!model.settings) throw Error('Settings unavailable');
           if (model.busy) throw Error('Another command is in progress');
-          model.patch({
-            [output === 'hue' ? 'hue_sync_enabled' : 'nanoleaf_sync_enabled']: enabled,
-          });
+          model.patch({ hue_sync_enabled: enabled });
           await model.save();
           if (model.error) throw Error(model.error);
         }

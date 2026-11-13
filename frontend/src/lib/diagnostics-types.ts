@@ -51,14 +51,12 @@ export interface DiagnosticStatus {
   light_update_fps: number;
   capture_hardware: boolean;
   hue_connected: boolean;
-  nanoleaf_connected: boolean;
   tv_power_state?: string;
   is_syncing?: boolean;
   requested_running?: boolean;
   last_error?: string | null;
   settings?: {
     hue_sync_enabled?: boolean;
-    nanoleaf_sync_enabled?: boolean;
   };
 }
 

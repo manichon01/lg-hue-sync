@@ -1,7 +1,6 @@
 export interface LiveSettings {
   brightness_multiplier: number;
   hue_output_brightness: number;
-  nanoleaf_output_brightness: number;
   saturation_boost: number;
   peak_weight: number;
   spatial_blend: number;
@@ -18,19 +17,12 @@ export interface LiveSettings {
   letterbox_detection: boolean;
   hdr_tone_mapping: boolean;
   hue_sync_enabled: boolean;
-  nanoleaf_sync_enabled: boolean;
   auto_tv_power: boolean;
-  nanoleaf_alignment: {
-    start_corner: string;
-    reverse_direction: boolean;
-    perimeter_offset: number;
-  };
   max_color_step: number;
 }
 export const initialSettings: LiveSettings = {
   brightness_multiplier: 1,
   hue_output_brightness: 1,
-  nanoleaf_output_brightness: 1,
   saturation_boost: 1,
   peak_weight: 0.15,
   spatial_blend: 0.15,
@@ -47,13 +39,7 @@ export const initialSettings: LiveSettings = {
   letterbox_detection: true,
   hdr_tone_mapping: false,
   hue_sync_enabled: true,
-  nanoleaf_sync_enabled: true,
   auto_tv_power: true,
-  nanoleaf_alignment: {
-    start_corner: 'bottom-center',
-    reverse_direction: false,
-    perimeter_offset: 0,
-  },
   max_color_step: 12,
 };
 export type NumericKey =
@@ -65,8 +51,7 @@ export type NumericKey =
   | 'smoothing_factor'
   | 'max_color_step'
   | 'noise_gate_threshold'
-  | 'hue_output_brightness'
-  | 'nanoleaf_output_brightness';
+  | 'hue_output_brightness';
 export const faders: {
   key: NumericKey;
   label: string;

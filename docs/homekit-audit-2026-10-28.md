@@ -70,7 +70,7 @@ Candidates require native readback and later explicitly authorized write tests:
 - Brightness, captions or playback state only where a genuine native getter and
   corresponding control exist. Display brightness, OLED pixel brightness and
   black level must not be conflated.
-- Independent Hue/Nanoleaf sync controls as separate accessory functions,
+- Hue sync control as a separate accessory function,
   preserving their existing ownership and independence.
 
 Prefer a separate, removable accessory process over patching LG's executable or

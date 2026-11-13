@@ -154,7 +154,7 @@ html.tv body {
   gap: 0.3rem;
 }
 
-/* Devices: Hue and Nanoleaf side by side on the left, calibration and maintenance on the right. */
+/* Devices: Hue on the left, calibration, maintenance and Home Assistant on the right. */
 .tv #panel-devices {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

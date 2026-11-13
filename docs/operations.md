@@ -43,7 +43,7 @@ For Hue preview grouping/orientation changes, also run `bun scripts/test_preview
 
 ## Colour response
 
-Hue and Nanoleaf retain fractional colour state for smoother small fades. In the dashboard,
+Hue retains fractional colour state for smoother small fades. In the dashboard,
 **Advanced tuning → Spatial Gradient Blend** controls blending between nearby screen regions
 (0–50%; default 0). Start at 10–20% if local transitions look too abrupt; higher values soften
 spatial boundaries. Black regions stay off. Save settings to persist the value; the JSON/API
@@ -199,7 +199,7 @@ explicitly supplied. To deploy a freshly verified Docker artifact, run
 The native v0.6.1 artifact was tested on the TV on 2026-10-22. Local/remote SHA-256
 matched; the prior binary was retained and the paired configuration checksum
 stayed unchanged. The dashboard responded, systemd reported active/running with
-zero restarts, hardware capture ran at 320x180/60 FPS, and both Hue and Nanoleaf
+zero restarts, hardware capture ran at 320x180/60 FPS, and Hue
 reported connected. This verifies this artifact's service/capture integration,
 not physical lighting quality or every future build.
 
@@ -314,7 +314,7 @@ The update retains `config.json`, backs up the previous binary, uploads through 
 
 On the same trusted LAN, create an Apple Shortcut with a **URL** action set to `http://<tv-ip>:8088/api/presets/neutral`, followed by **Get Contents of URL** with method **POST** and no request body. Replace `neutral` with `softColor` or `vividColor` for the other dashboard colour choices. Legacy names `highChroma`, `neonContrast`, `darkSceneDetail`, `fastResponse`, and `lowStimulation` remain accepted by HTTP; the last two retain full-profile behaviour. A successful request returns `{"status":"ok"}`; an unknown name returns HTTP 400. The existing `POST /api/start` and `POST /api/stop` endpoints can be used in separate Shortcuts.
 
-Preset changes affect live settings only. Use the dashboard's **Save Settings** control, or `POST /api/save-config`, to keep the chosen settings after restart. Presets preserve Hue/Nanoleaf output trims, device enablement, alignment, and other non-preset controls. Port 8088 has no authentication; keep it on the trusted LAN and do not forward it to the Internet. No Shortcut or API call is needed to edit the TV's `config.json` directly.
+Preset changes affect live settings only. Use the dashboard's **Save Settings** control, or `POST /api/save-config`, to keep the chosen settings after restart. Presets preserve the Hue output trim, device enablement and other non-preset controls. Port 8088 has no authentication; keep it on the trusted LAN and do not forward it to the Internet. No Shortcut or API call is needed to edit the TV's `config.json` directly.
 
 ## HTTP API description
 
@@ -442,7 +442,7 @@ For control integration, use `POST /api/start` and `POST /api/stop`, then read
 `GET /api/status`. `requested_running` acknowledges the latest accepted HTTP intent;
 `pipeline_state` reports actual progress, and `last_error` retains capture failures.
 `is_syncing` is true only after a valid hardware frame, not when a command is queued.
-Check Hue/Nanoleaf connection flags and light-update rate separately. Stop releases the
+Check the Hue connection flag and light-update rate separately. Stop releases the
 capture owner and zeros paused rates; Start reacquires it. A paused daemon still serves
 the API. Process start/stop/restart remains systemd's responsibility.
 
@@ -470,7 +470,6 @@ For an existing installation, copy `scripts/log-maintenance.sh` to `/var/home/ro
 
 - Hue layout changed: dashboard **Refresh selected area layout**.
 - Gradient count unexpected: inspect `entertainment_configuration.channels[].members`; physical segment count differs from stream-channel count.
-- Nanoleaf order wrong: run **4D Tracer**, then adjust corner, direction, and offset under **Calibration**.
 - Standby leaves lights owned: enable **Follow TV power** and inspect transition logs.
 
 ## Hue authentication and migration recovery
@@ -489,12 +488,12 @@ unavailable until a valid area is selected. Selecting an area never changes its 
 - Authorization rejected: re-pair using the Bridge button.
 - Area missing after migration: select an existing area explicitly; no arbitrary replacement is chosen.
 - Known layout change with failed refresh: Hue stays disconnected. Retry **Refresh selected area layout** after resolving connectivity.
-- Another application owns the area: Hue suspends independently of Nanoleaf. Use **Start** to retry after that application releases it; no automatic takeover.
+- Another application owns the area: Hue suspends. Use **Start** to retry after that application releases it; no automatic takeover.
 - Bridge IP changed: a failed TCP connection permits identity-scoped rediscovery. TLS identity failures do not permit fallback to another bridge.
 
 Validate on the TV before release: initial pairing, existing-pin migration, automatic address
 recovery, another app's ownership, area edits/deletion, explicit Stop, HDMI/app transitions and
-independent Nanoleaf output. Host fixtures and ARM compilation do not establish these results.
+Hue output. Host fixtures and ARM compilation do not establish these results.
 Measure CPU and packet-loss behavior before claiming a performance improvement from cached
 50 Hz repetitions. A 2 Hz repeat remained below Hue's timeout, but was below its recommended
 continuous transport cadence.
@@ -504,7 +503,7 @@ continuous transport cadence.
 The native ARMv7 artifact's SHA-256 matched the installed TV binary. Verified HTTPS
 pairing and legacy-pin-to-Bridge-ID migration succeeded. The initial migration preserved
 credentials and configuration except for the new Bridge ID; explicit re-pairing then saved
-new Hue credentials while retaining Nanoleaf configuration and the selected layout.
+new Hue credentials while retaining the selected layout.
 
 Home caused `unsupported_source`, zero capture/update rates, released hardware and
 both output flags false. Returning to the original HDMI input restored hardware capture
@@ -512,7 +511,7 @@ at 60 FPS and both outputs. Manual Stop remained paused across Home/HDMI changes
 explicit Start restored both outputs. Disabling either output left the other and capture
 running; both output settings were restored. The service reported zero automatic restarts.
 
-The maintainer confirmed both Hue and Nanoleaf visibly syncing after restoration;
+The maintainer confirmed Hue visibly syncing after restoration;
 this was not a calibrated colour or latency measurement.
 
 The first DTLS attempt timed out once, then retry connected; later resume handshakes
@@ -570,7 +569,7 @@ is moved; changing another control must not round a saved preset.
 
 | Control | Stops |
 |---|---|
-| Hue / Nanoleaf output trim | 0–2.5×, 0.5× steps |
+| Hue output trim | 0–2.5×, 0.5× steps |
 | Brightness / saturation | 0.5×, 1×, 1.5×, 2×, 2.5× |
 | Highlights | 0–100%, 10% steps |
 | Blend | 0–50%, 5% steps; half local colour, half nearby average at maximum |

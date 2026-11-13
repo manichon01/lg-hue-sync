@@ -41,7 +41,6 @@ class PipelineSensor(CoordinatorEntity[HueSyncCoordinator], SensorEntity):
                 "capture_fps",
                 "light_update_fps",
                 "hue_connected",
-                "nanoleaf_connected",
                 "capture_hardware",
                 "capture_resolution",
                 "tv_power_state",
