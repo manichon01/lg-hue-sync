@@ -4,7 +4,7 @@
  * layouts are untouched. Sizes follow the viewport height so 1080p and 4K viewports match.
  */
 html.tv {
-  font-size: min(1.45vh, 0.815vw);
+  font-size: min(1.56vh, 0.875vw);
 }
 html.tv,
 html.tv body {
@@ -136,7 +136,7 @@ html.tv body {
   display: none;
 }
 .tv .frame-editor .screen {
-  inline-size: min(100%, 48rem);
+  inline-size: min(100%, 40rem);
   margin-inline: auto;
 }
 .tv .fader input[type="range"] {
@@ -153,13 +153,13 @@ html.tv body {
 .tv #panel-devices {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.9rem 1.2rem;
   align-content: start;
 }
 .tv #panel-devices > details:nth-of-type(1) {
   grid-column: 1;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
 }
 .tv #panel-devices > details:nth-of-type(2) {
   grid-column: 2;
@@ -168,6 +168,10 @@ html.tv body {
 .tv #panel-devices > details:nth-of-type(3) {
   grid-column: 2;
   grid-row: 2;
+}
+.tv #panel-devices > details:nth-of-type(4) {
+  grid-column: 2;
+  grid-row: 3;
 }
 .tv #panel-devices > section[aria-labelledby="install-heading"] {
   display: none;
