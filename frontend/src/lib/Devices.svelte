@@ -47,6 +47,15 @@
       void loadAreas();
     }
   }
+  const patterns = [
+    ['red', 'Red'],
+    ['green', 'Green'],
+    ['blue', 'Blue'],
+    ['white', 'White'],
+    ['warm-white', 'Warm 3000K'],
+    ['daylight-white', 'Daylight D65'],
+    ['off', 'Return to sync'],
+  ];
   const trimStops = [0, 0.5, 1, 1.5, 2, 2.5];
 </script>
 
@@ -134,9 +143,16 @@
   >
   <div class="section-body">
     <p class="muted">
-      Use the Test colour buttons on the Tuning tab: they pass through the Tuning settings, so you
-      can adjust saturation or brightness and watch the lights. Click ⓘ for the full guide.
+      Test colours pass through the Tuning settings, so you can adjust saturation or brightness and
+      watch the lights. They are also on the Tuning tab. Click ⓘ for the full guide.
     </p>
+    <div class="button-row">
+      {#each patterns as [value, label] (value)}<Button
+          variant={(model.status?.calibration_pattern ?? 'off') === value ? 'default' : 'secondary'}
+          disabled={model.busy}
+          onclick={() => run(`/api/test-pattern/${value}`)}>{label}</Button
+        >{/each}
+    </div>
     <a class="text-link" href="/capture-patterns" target="_blank" rel="noopener"
       >Open TV capture patterns ↗</a
     >

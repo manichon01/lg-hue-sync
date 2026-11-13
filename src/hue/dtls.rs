@@ -50,6 +50,12 @@ impl Write for ConnectedUdpSocket {
     }
 }
 
+/// Per-attempt DTLS handshake budget. The bridge can take several seconds to open its DTLS port
+/// after a stream starts, so many short attempts finish sooner than one long one.
+const ATTEMPT_TIMEOUT: Duration = Duration::from_millis(1500);
+const CONNECT_BUDGET: Duration = Duration::from_secs(12);
+const MAX_ATTEMPTS: u32 = 8;
+
 pub struct HueDtlsClient {
     stream: SslStream<ConnectedUdpSocket>,
 }
@@ -60,7 +66,7 @@ impl HueDtlsClient {
         if !super::valid_configuration_id(application_id) {
             return Err(anyhow!("Invalid Hue DTLS application ID"));
         }
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + CONNECT_BUDGET;
         let psk_bytes = hex_to_bytes(clientkey_hex).with_context(|| {
             "Failed to parse clientkey as hex (must be 32 hex chars / 16 bytes)"
         })?;
@@ -102,40 +108,33 @@ impl HueDtlsClient {
 
         let connector = builder.build();
 
-        // Bind local UDP socket and connect to Hue Bridge:2100
-        let socket =
-            UdpSocket::bind("0.0.0.0:0").with_context(|| "Failed to bind local UDP socket")?;
         let target_addr = format!("{}:2100", bridge_ip);
         let target_ip: IpAddr = bridge_ip
             .parse()
             .context("Hue Bridge address must be an IP literal")?;
-        socket
-            .connect((target_ip, 2100))
-            .with_context(|| format!("Failed to connect UDP socket to {}", target_addr))?;
-        socket
-            .set_read_timeout(Some(std::time::Duration::from_secs(5)))
-            .with_context(|| "Failed to set UDP socket read timeout")?;
-        socket
-            .set_write_timeout(Some(std::time::Duration::from_secs(5)))
-            .with_context(|| "Failed to set UDP socket write timeout")?;
 
         let mut last_err = None;
-        for attempt in 1..=4 {
+        for attempt in 1..=MAX_ATTEMPTS {
             if Instant::now() >= deadline {
                 break;
             }
-            let socket_clone = socket
-                .try_clone()
-                .with_context(|| "Failed to clone UDP socket for DTLS retry")?;
+            // A silent first handshake must not consume the whole budget: each attempt gets a
+            // short deadline and a fresh socket, so the next one starts at once.
+            let attempt_deadline = (Instant::now() + ATTEMPT_TIMEOUT).min(deadline);
+            let socket = UdpSocket::bind("0.0.0.0:0")
+                .with_context(|| "Failed to bind local UDP socket")?;
+            socket
+                .connect((target_ip, 2100))
+                .with_context(|| format!("Failed to connect UDP socket to {}", target_addr))?;
             info!(
-                "Performing DTLS handshake with {} (attempt {}/4)...",
-                target_addr, attempt
+                "Performing DTLS handshake with {} (attempt {}/{})...",
+                target_addr, attempt, MAX_ATTEMPTS
             );
             match connector.connect(
                 "HueBridge",
                 ConnectedUdpSocket {
-                    socket: socket_clone,
-                    deadline: Some(deadline),
+                    socket,
+                    deadline: Some(attempt_deadline),
                 },
             ) {
                 Ok(mut stream) => {

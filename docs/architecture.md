@@ -43,7 +43,7 @@ retain their RGB/XY encoding and are cleared for stop, layout refresh and reconf
 
 `src/hue/reconnect.rs` serializes Hue activation, DTLS connection and cleanup on a dedicated
 worker. Generation checks discard results superseded by stop, disable or area changes; retries
-do not block command processing. DTLS handshakes share a five-second deadline;
+do not block command processing. DTLS handshakes share a twelve-second deadline split into 1.5-second attempts;
 Bridge HTTP operations retain their five-second deadline. Shutdown joins the worker after
 invalidating pending connections. One bounded SSE worker subscribes before taking its initial
 snapshot and merges partial updates. Reconnection reconciles ownership and layout; generation

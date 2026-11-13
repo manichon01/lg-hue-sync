@@ -12,12 +12,19 @@ pub enum PipelineState {
     Paused,
 }
 
+/// Shortest wait before an app whose capture failed is tried again after a video change.
+const APP_RETRY_MIN: std::time::Duration = std::time::Duration::from_secs(3);
+/// Retry an app capture at least this often while it stays in the foreground.
+const APP_RETRY_FALLBACK: std::time::Duration = std::time::Duration::from_secs(30);
+
 pub struct CaptureSourcePolicy {
     compatible: Option<bool>,
     display_off: bool,
     source_paused: bool,
     manually_stopped: bool,
     app_failed: bool,
+    app_failed_at: Option<std::time::Instant>,
+    app_failed_video: Option<Option<String>>,
     pattern_active: bool,
 }
 
@@ -29,6 +36,8 @@ impl CaptureSourcePolicy {
             source_paused: compatible == Some(false) && requested,
             manually_stopped: false,
             app_failed: false,
+            app_failed_at: None,
+            app_failed_video: None,
             pattern_active: false,
         }
     }
@@ -38,14 +47,42 @@ impl CaptureSourcePolicy {
         self.pattern_active = active;
     }
 
-    /// An app could not be captured (e.g. protected video): wait for another source.
+    /// An app could not be captured (e.g. its video had not started): wait, then retry.
     pub fn app_capture_failed(&mut self) {
         self.app_failed = true;
+        self.app_failed_at = Some(std::time::Instant::now());
+        self.app_failed_video = None;
+    }
+
+    fn clear_app_failure(&mut self) {
+        self.app_failed = false;
+        self.app_failed_at = None;
+        self.app_failed_video = None;
+    }
+
+    /// While an app is paused for a failed capture, retry once the TV's video status changes
+    /// (playback started) or after a slow fallback interval, instead of waiting for HDMI.
+    pub fn observe_video(&mut self, video: &Option<serde_json::Value>) {
+        let Some(failed_at) = self.app_failed_at.filter(|_| self.app_failed) else {
+            return;
+        };
+        let current = video.as_ref().map(|value| value.to_string());
+        let elapsed = failed_at.elapsed();
+        let changed = match &self.app_failed_video {
+            None => {
+                self.app_failed_video = Some(current);
+                false
+            }
+            Some(previous) => *previous != current,
+        };
+        if (changed && elapsed >= APP_RETRY_MIN) || elapsed >= APP_RETRY_FALLBACK {
+            self.clear_app_failure();
+        }
     }
 
     pub fn observe_source(&mut self, source: crate::capture_source::CaptureSource) {
         if !matches!(source, crate::capture_source::CaptureSource::App | crate::capture_source::CaptureSource::Unknown) {
-            self.app_failed = false;
+            self.clear_app_failure();
         }
         self.observe(source.compatible());
     }
@@ -60,7 +97,7 @@ impl CaptureSourcePolicy {
         if let Some(requested) = requested {
             self.manually_stopped = !requested;
             if requested {
-                self.app_failed = false;
+                self.clear_app_failure();
             }
             if !requested {
                 self.source_paused = false;
@@ -419,5 +456,33 @@ mod tests {
         assert!(!policy.auto_resume());
         policy.observe(Some(true));
         assert!(policy.auto_resume());
+    }
+
+    #[test]
+    fn failed_app_capture_retries_on_video_change_or_after_the_fallback_interval() {
+        use crate::capture_source::CaptureSource;
+        let video = |value: i64| Some(serde_json::json!({ "width": value }));
+        let mut policy = CaptureSourcePolicy::new(Some(true), true);
+        policy.observe_source(CaptureSource::App);
+        policy.app_capture_failed();
+        assert!(policy.blocked());
+        // Same video status: stays paused. A change right away is held back by the minimum wait.
+        policy.observe_video(&video(0));
+        policy.observe_video(&video(1920));
+        assert!(policy.blocked());
+        // A change after the minimum wait retries.
+        policy.app_failed_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(4));
+        policy.observe_video(&video(1920));
+        assert!(!policy.blocked());
+        // No change at all still retries after the fallback interval.
+        policy.app_capture_failed();
+        policy.observe_video(&video(1920));
+        policy.app_failed_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(31));
+        policy.observe_video(&video(1920));
+        assert!(!policy.blocked());
+        // Leaving the app clears the failure.
+        policy.app_capture_failed();
+        policy.observe_source(CaptureSource::Hdmi);
+        assert!(!policy.blocked());
     }
 }

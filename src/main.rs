@@ -600,6 +600,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
         let observation = update_tv_observation(&mut tv_events, &shared_state);
         signal_hold.observe(observation.video.as_ref(), std::time::Instant::now());
         source_policy.observe_source(observation.source);
+        source_policy.observe_video(&observation.video);
         source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
         source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
         if auto_tv_power {
@@ -706,6 +707,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 watchdog.tick();
                 let observation = update_tv_observation(&mut tv_events, &shared_state);
                 source_policy.observe_source(observation.source);
+                source_policy.observe_video(&observation.video);
                 source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 if source_policy.source_paused()
@@ -1123,6 +1125,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
             source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
             let latest = update_tv_observation(&mut tv_events, &shared_state);
             source_policy.observe_source(latest.source);
+            source_policy.observe_video(&latest.video);
             source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
             let power_inactive = auto_tv_power && latest.power.active == Some(false);
             if power_inactive {
@@ -1435,6 +1438,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 let latest = update_tv_observation(&mut tv_events, &shared_state);
                 source_policy.observe_source(latest.source);
+                source_policy.observe_video(&latest.video);
                 source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
                 let power_inactive = auto_tv_power && latest.power.active == Some(false);
                 if power_inactive {
