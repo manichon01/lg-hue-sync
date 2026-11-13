@@ -17,6 +17,7 @@
   import Segmented from './lib/Segmented.svelte';
   import Fader from './lib/Fader.svelte';
   import Preview from './lib/Preview.svelte';
+  import TestColours from './lib/TestColours.svelte';
   import Devices from './lib/Devices.svelte';
   import InstallApp from './lib/InstallApp.svelte';
   import BlackFrameSettings from './lib/BlackFrameSettings.svelte';
@@ -248,6 +249,7 @@
       </p>
     </section>
     <Preview status={model.status} {settings} active={tab === 'tuning'} />
+    <TestColours {model} />
     <section class="card tuning-panel">
       <div class="panel-heading">
         <h2>Advanced tuning</h2>

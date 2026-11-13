@@ -1617,11 +1617,34 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                         if let (Some(ref mut sampler), Some(ref mut dtls), Some(ref mut builder)) =
                             (&mut hue_sampler, &mut hue_dtls, &mut hue_packet_builder)
                         {
+                            // Solid calibration colours go through the normal processing as a
+                            // synthetic frame, so Tuning changes are visible on them.
+                            let solid_pattern = calibration_pattern(&shared_state)
+                                .filter(|pattern| {
+                                    !matches!(
+                                        pattern,
+                                        CalibrationPattern::Quadrants
+                                            | CalibrationPattern::Perimeter
+                                    )
+                                })
+                                .map(|pattern| calibration_color(pattern, (0.5, 0.5)));
+                            let synthetic = solid_pattern.map(|color| {
+                                let pixels = (frame.width * frame.height) as usize;
+                                let mut data = Vec::with_capacity(pixels * 4);
+                                for _ in 0..pixels {
+                                    data.extend_from_slice(&[color.r, color.g, color.b, 255]);
+                                }
+                                data
+                            });
+                            let (sample_data, sample_bgra) = match synthetic.as_deref() {
+                                Some(data) => (data, false),
+                                None => (frame.data, frame.is_bgra),
+                            };
                             let (sampled_zones, cut) = sampler.sample_frame(
-                                frame.data,
+                                sample_data,
                                 frame.width,
                                 frame.height,
-                                frame.is_bgra,
+                                sample_bgra,
                             );
                             is_scene_cut = cut;
 
@@ -1630,7 +1653,8 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                                 nl_s.set_active_rect(active_rect);
                             }
 
-                            let calibration = calibration_pattern(&shared_state);
+                            let calibration = calibration_pattern(&shared_state)
+                                .filter(|_| solid_pattern.is_none());
                             let sampled_zones = calibration
                                 .map(|pattern| calibration_zone_colors(pattern, &config.zones))
                                 .unwrap_or(sampled_zones);

@@ -28,6 +28,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 pub const EMBEDDED_UI_HTML: &str = include_str!("ui.html");
 const CAPTURE_PATTERNS_HTML: &str = include_str!("../../calibration-patterns/capture.html");
+const CALIBRATION_HELP_HTML: &str = include_str!("../../calibration-patterns/help.html");
 
 #[derive(Debug)]
 pub enum ControlCommand {
@@ -887,6 +888,7 @@ fn build_router(state: AppState) -> anyhow::Result<Router> {
             }),
         )
         .route("/capture-patterns", get(capture_patterns))
+        .route("/calibration-help", get(calibration_help))
         .route(
             "/openapi.json",
             get(move || {
@@ -916,6 +918,10 @@ fn embedded_asset(content_type: &'static str, bytes: &'static [u8]) -> impl Into
 
 async fn capture_patterns() -> Html<&'static str> {
     Html(CAPTURE_PATTERNS_HTML)
+}
+
+async fn calibration_help() -> Html<&'static str> {
+    Html(CALIBRATION_HELP_HTML)
 }
 
 #[derive(Deserialize, ToSchema)]

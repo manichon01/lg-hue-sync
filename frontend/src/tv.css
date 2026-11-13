@@ -71,7 +71,7 @@ html.tv body {
 .tv #panel-tuning {
   display: grid;
   grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0.9rem 1.2rem;
 }
 .tv #panel-tuning > .preset-panel {
@@ -86,9 +86,16 @@ html.tv body {
 }
 .tv #panel-tuning > .tuning-panel {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   min-block-size: 0;
   overflow: hidden;
+}
+.tv #panel-tuning > .test-colours {
+  grid-column: 1;
+  grid-row: 3;
+}
+.tv .test-colours .button-row {
+  gap: 0.4rem;
 }
 .tv .preset-group {
   margin-block-start: 0.5rem;

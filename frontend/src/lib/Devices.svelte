@@ -199,10 +199,20 @@
   </div>
 </details>
 <details class="card accordion" open={isTv}>
-  <summary>Calibration</summary>
+  <summary
+    >Calibration
+    <a
+      class="info-icon"
+      href="/calibration-help"
+      title="How calibration works: test colours go through the Tuning settings. Click for the full guide."
+      aria-label="Calibration help"
+      onclick={(event) => event.stopPropagation()}>ⓘ</a
+    ></summary
+  >
   <div class="section-body">
     <p class="muted">
-      Colour buttons send the colour straight to the lights. The capture patterns page must be shown on the HDMI source (for example cast it from a PC to the Google TV): the TV captures it and the lights react. It has live settings and a view of the colours sent to the lights.
+      Test colours pass through the Tuning settings, so you can adjust saturation or brightness and
+      watch the lights. They are also on the Tuning tab.
     </p>
     <a class="text-link" href="/capture-patterns" target="_blank" rel="noopener"
       >Open TV capture patterns ↗</a
