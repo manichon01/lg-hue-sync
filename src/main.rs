@@ -791,6 +791,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
         let observation = update_tv_observation(&mut tv_events, &shared_state);
         signal_hold.observe(observation.video.as_ref(), std::time::Instant::now());
         source_policy.observe_source(observation.source);
+        source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
         source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
         if auto_tv_power {
             if let Some(active) = observation.power.active {
@@ -913,6 +914,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 watchdog.tick();
                 let observation = update_tv_observation(&mut tv_events, &shared_state);
                 source_policy.observe_source(observation.source);
+                source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 if source_policy.source_paused()
                     && source_policy.blocked()
@@ -1429,6 +1431,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
             source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
             let latest = update_tv_observation(&mut tv_events, &shared_state);
             source_policy.observe_source(latest.source);
+            source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
             let power_inactive = auto_tv_power && latest.power.active == Some(false);
             if power_inactive {
                 observed_tv_power = Some(false);
@@ -1483,7 +1486,10 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
 
         // If currently on fallback MockCapture, rapidly probe if hardware VtCapture has become available
         // (e.g. if the TV was on the home screen at boot or during input/format switch)
-        if !capture.is_real_hardware() && capture_retry.ready() {
+        if !capture.is_real_hardware()
+            && capture_retry.ready()
+            && calibration_pattern(&shared_state).is_none()
+        {
             match VtCapture::try_new(config.capture_width, config.capture_height) {
                 Ok(hw_capture) => {
                     info!("[+] Successfully upgraded from MockCapture to hardware VtCapture!");
@@ -1790,6 +1796,14 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                     }
                 }
             }
+            Err(e) if calibration_pattern(&shared_state).is_some() => {
+                // A calibration pattern needs no capture: keep the lights running on the fallback.
+                warn!("Capture unavailable during a calibration pattern ({e:#}); continuing without it.");
+                capture = Box::new(MockCapture::new(config.capture_width, config.capture_height));
+                shared_state.capture_hardware.store(false, Ordering::Relaxed);
+                capture_recovery.reset();
+                continue 'sync_loop;
+            }
             Err(e) => {
                 shared_state.set_sync_state(SyncState::Recovering, Some(e.to_string()));
                 let delay = match capture_recovery.failed(&e) {
@@ -1856,6 +1870,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 source_policy.observe_display(shared_state.display_off.load(Ordering::Relaxed));
                 let latest = update_tv_observation(&mut tv_events, &shared_state);
                 source_policy.observe_source(latest.source);
+                source_policy.observe_pattern(calibration_pattern(&shared_state).is_some());
                 let power_inactive = auto_tv_power && latest.power.active == Some(false);
                 if power_inactive {
                     observed_tv_power = Some(false);

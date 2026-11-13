@@ -18,6 +18,7 @@ pub struct CaptureSourcePolicy {
     source_paused: bool,
     manually_stopped: bool,
     app_failed: bool,
+    pattern_active: bool,
 }
 
 impl CaptureSourcePolicy {
@@ -28,7 +29,13 @@ impl CaptureSourcePolicy {
             source_paused: compatible == Some(false) && requested,
             manually_stopped: false,
             app_failed: false,
+            pattern_active: false,
         }
+    }
+
+    /// A calibration pattern drives the lights without capture, so no source blocks it.
+    pub fn observe_pattern(&mut self, active: bool) {
+        self.pattern_active = active;
     }
 
     /// An app could not be captured (e.g. protected video): wait for another source.
@@ -68,7 +75,8 @@ impl CaptureSourcePolicy {
     }
 
     pub fn blocked(&self) -> bool {
-        self.display_off || self.app_failed || self.compatible == Some(false)
+        self.display_off
+            || (!self.pattern_active && (self.app_failed || self.compatible == Some(false)))
     }
     pub fn manually_stopped(&self) -> bool {
         self.manually_stopped
