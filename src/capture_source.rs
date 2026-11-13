@@ -5,6 +5,7 @@ const FOREGROUND_URI: &str = "luna://com.webos.applicationManager/getForegroundA
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CaptureSource {
     Hdmi,
+    App,
     Unsupported,
     Unknown,
 }
@@ -13,6 +14,7 @@ impl CaptureSource {
     pub fn label(self) -> &'static str {
         match self {
             Self::Hdmi => "HDMI",
+            Self::App => "App",
             Self::Unsupported => "Unsupported",
             Self::Unknown => "Unknown",
         }
@@ -20,7 +22,7 @@ impl CaptureSource {
 
     pub fn compatible(self) -> Option<bool> {
         match self {
-            Self::Hdmi => Some(true),
+            Self::Hdmi | Self::App => Some(true),
             Self::Unsupported => Some(false),
             Self::Unknown => None,
         }
@@ -45,7 +47,9 @@ pub(crate) fn parse_source(value: &Value) -> CaptureSource {
         | "com.webos.app.hdmi2"
         | "com.webos.app.hdmi3"
         | "com.webos.app.hdmi4" => CaptureSource::Hdmi,
-        _ => CaptureSource::Unsupported,
+        // Home shows no video plane; other apps are tried (DRM apps fail on their own).
+        "com.webos.app.home" => CaptureSource::Unsupported,
+        _ => CaptureSource::App,
     }
 }
 
@@ -80,16 +84,18 @@ mod tests {
         for id in [
             "netflix",
             "com.webos.app.netflix",
-            "com.webos.app.home",
             "com.webos.app.browser",
             "com.webos.app.livetv",
             "com.webos.app.hdmi5",
             "com.webos.app.hdmi1.extra",
         ] {
             let source = parse_source(&json!({"returnValue":true,"appId":id}));
-            assert_eq!(source, CaptureSource::Unsupported);
-            assert_eq!(source.compatible(), Some(false));
+            assert_eq!(source, CaptureSource::App);
+            assert_eq!(source.compatible(), Some(true));
         }
+        let home = parse_source(&json!({"returnValue":true,"appId":"com.webos.app.home"}));
+        assert_eq!(home, CaptureSource::Unsupported);
+        assert_eq!(home.compatible(), Some(false));
         for value in [
             json!({}),
             json!({"appId":"com.webos.app.hdmi1"}),

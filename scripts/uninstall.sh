@@ -29,7 +29,13 @@ rm -f /run/systemd/system/lg-hue-sync.service /etc/systemd/system/lg-hue-sync.se
 rm -f /var/lib/webosbrew/init.d/50-lg-hue-sync
 
 for root in /var/luna-service2 /var/luna-service2-dev; do
-    rm -f "$root/manifests.d/org.webosbrew.lg-hue-sync.json"
+    rm -f "$root/manifests.d/org.webosbrew.lg-hue-sync.daemon.json"
+    rm -f "$root/roles.d/org.webosbrew.lg-hue-sync.daemon.json"
+    rm -f "$root/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json"
+    # Legacy daemon files; the manifest of that name belongs to the launcher app unless it is ours.
+    if grep -qF "roles.d/org.webosbrew.lg-hue-sync.json" "$root/manifests.d/org.webosbrew.lg-hue-sync.json" 2>/dev/null; then
+        rm -f "$root/manifests.d/org.webosbrew.lg-hue-sync.json"
+    fi
     rm -f "$root/roles.d/org.webosbrew.lg-hue-sync.json"
     rm -f "$root/client-permissions.d/org.webosbrew.lg-hue-sync.json"
 done

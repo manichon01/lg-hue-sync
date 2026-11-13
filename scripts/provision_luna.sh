@@ -17,30 +17,30 @@ provision_files() {
     mkdir -p /var/luna-service2-dev/manifests.d /var/luna-service2-dev/roles.d /var/luna-service2-dev/client-permissions.d
 
     # 1. Manifests
-    cat << 'JSON' > /var/luna-service2/manifests.d/org.webosbrew.lg-hue-sync.json
+    cat << 'JSON' > /var/luna-service2/manifests.d/org.webosbrew.lg-hue-sync.daemon.json
 {
-    "id": "org.webosbrew.lg-hue-sync",
+    "id": "org.webosbrew.lg-hue-sync.daemon",
     "version": "1.0.0",
     "roleFiles": [
-        "/var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "clientPermissionFiles": [
-        "/var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "serviceFiles": [],
     "apiPermissionFiles": []
 }
 JSON
 
-    cat << 'JSON' > /var/luna-service2-dev/manifests.d/org.webosbrew.lg-hue-sync.json
+    cat << 'JSON' > /var/luna-service2-dev/manifests.d/org.webosbrew.lg-hue-sync.daemon.json
 {
-    "id": "org.webosbrew.lg-hue-sync",
+    "id": "org.webosbrew.lg-hue-sync.daemon",
     "version": "1.0.0",
     "roleFiles": [
-        "/var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "clientPermissionFiles": [
-        "/var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "serviceFiles": [],
     "apiPermissionFiles": []
@@ -88,8 +88,8 @@ JSON
     ]
 }
 JSON
-    cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.json
-    cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.json
+    cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.daemon.json
+    cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.daemon.json
     rm -f /tmp/org.webosbrew.lg-hue-sync.role.json
 
     # 3. Client Permissions
@@ -112,9 +112,19 @@ JSON
     ]
 }
 JSON
-    cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.json
-    cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.json
+    cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json
+    cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json
     rm -f /tmp/org.webosbrew.lg-hue-sync.perm.json
+
+    # Earlier releases wrote the daemon files under the launcher app id. Installing the app
+    # rewrites its own manifest with that name, which orphaned the daemon role. Remove the old
+    # files, but only the manifest when it is still ours (the app writes its own role as .app.json).
+    for root in /var/luna-service2 /var/luna-service2-dev; do
+        if grep -qF "roles.d/org.webosbrew.lg-hue-sync.json" "$root/manifests.d/org.webosbrew.lg-hue-sync.json" 2>/dev/null; then
+            rm -f "$root/manifests.d/org.webosbrew.lg-hue-sync.json"
+        fi
+        rm -f "$root/roles.d/org.webosbrew.lg-hue-sync.json" "$root/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+    done
 
     ls-control scan-services
     echo "[+] Luna permissions provisioned and scanned successfully."
@@ -130,30 +140,30 @@ set -e
 mkdir -p /var/luna-service2/manifests.d /var/luna-service2/roles.d /var/luna-service2/client-permissions.d
 mkdir -p /var/luna-service2-dev/manifests.d /var/luna-service2-dev/roles.d /var/luna-service2-dev/client-permissions.d
 
-cat << 'JSON' > /var/luna-service2/manifests.d/org.webosbrew.lg-hue-sync.json
+cat << 'JSON' > /var/luna-service2/manifests.d/org.webosbrew.lg-hue-sync.daemon.json
 {
-    "id": "org.webosbrew.lg-hue-sync",
+    "id": "org.webosbrew.lg-hue-sync.daemon",
     "version": "1.0.0",
     "roleFiles": [
-        "/var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "clientPermissionFiles": [
-        "/var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "serviceFiles": [],
     "apiPermissionFiles": []
 }
 JSON
 
-cat << 'JSON' > /var/luna-service2-dev/manifests.d/org.webosbrew.lg-hue-sync.json
+cat << 'JSON' > /var/luna-service2-dev/manifests.d/org.webosbrew.lg-hue-sync.daemon.json
 {
-    "id": "org.webosbrew.lg-hue-sync",
+    "id": "org.webosbrew.lg-hue-sync.daemon",
     "version": "1.0.0",
     "roleFiles": [
-        "/var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "clientPermissionFiles": [
-        "/var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+        "/var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json"
     ],
     "serviceFiles": [],
     "apiPermissionFiles": []
@@ -200,8 +210,8 @@ cat << 'JSON' > /tmp/org.webosbrew.lg-hue-sync.role.json
     ]
 }
 JSON
-cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.json
-cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.json
+cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2/roles.d/org.webosbrew.lg-hue-sync.daemon.json
+cp -f /tmp/org.webosbrew.lg-hue-sync.role.json /var/luna-service2-dev/roles.d/org.webosbrew.lg-hue-sync.daemon.json
 rm -f /tmp/org.webosbrew.lg-hue-sync.role.json
 
 cat << 'JSON' > /tmp/org.webosbrew.lg-hue-sync.perm.json
@@ -223,9 +233,19 @@ cat << 'JSON' > /tmp/org.webosbrew.lg-hue-sync.perm.json
     ]
 }
 JSON
-cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.json
-cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.json
+cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json
+cp -f /tmp/org.webosbrew.lg-hue-sync.perm.json /var/luna-service2-dev/client-permissions.d/org.webosbrew.lg-hue-sync.daemon.json
 rm -f /tmp/org.webosbrew.lg-hue-sync.perm.json
+
+# Earlier releases wrote the daemon files under the launcher app id. Installing the app
+# rewrites its own manifest with that name, which orphaned the daemon role. Remove the old
+# files, but only the manifest when it is still ours (the app writes its own role as .app.json).
+for root in /var/luna-service2 /var/luna-service2-dev; do
+    if grep -qF "roles.d/org.webosbrew.lg-hue-sync.json" "$root/manifests.d/org.webosbrew.lg-hue-sync.json" 2>/dev/null; then
+        rm -f "$root/manifests.d/org.webosbrew.lg-hue-sync.json"
+    fi
+    rm -f "$root/roles.d/org.webosbrew.lg-hue-sync.json" "$root/client-permissions.d/org.webosbrew.lg-hue-sync.json"
+done
 
 ls-control scan-services
 echo "[+] Luna permissions provisioned and scanned successfully."

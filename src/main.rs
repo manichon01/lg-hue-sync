@@ -897,7 +897,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 && source_policy.blocked()
                 && !shared_state.display_off.load(Ordering::Relaxed)
             {
-                shared_state.set_sync_state(SyncState::UnsupportedSource, Some("Built-in apps and Home are not supported by this capture backend; select HDMI to resume.".into()));
+                shared_state.set_sync_state(SyncState::UnsupportedSource, Some("The Home screen has no video to capture; open an app or HDMI input to resume.".into()));
             } else if !capture_faulted {
                 shared_state.set_sync_state(SyncState::Paused, None);
             }
@@ -918,7 +918,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                     && source_policy.blocked()
                     && !shared_state.display_off.load(Ordering::Relaxed)
                 {
-                    shared_state.set_sync_state(SyncState::UnsupportedSource, Some("Built-in apps and Home are not supported by this capture backend; select HDMI to resume.".into()));
+                    shared_state.set_sync_state(SyncState::UnsupportedSource, Some("The Home screen has no video to capture; open an app or HDMI input to resume.".into()));
                 } else if source_policy.manually_stopped() && !capture_faulted {
                     shared_state.set_sync_state(SyncState::Paused, None);
                 }

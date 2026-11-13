@@ -19,7 +19,7 @@ Native ambient-light synchronization for rooted LG webOS TVs. A Rust daemon capt
 ## Limits and safety
 
 - Root access is required. Rooting can void warranties or render a TV unusable; confirm model and firmware compatibility first.
-- Capture is HDMI-only: known built-in apps and Home automatically pause capture; returning to HDMI resumes it unless manually stopped. This input policy does not detect or bypass DRM. External HDMI playback is the supported path for protected content.
+- Capture works on HDMI inputs and on built-in apps. Only the Home screen pauses capture (no video plane). DRM-protected apps (Netflix, Amazon) usually cannot be captured; this build does not detect or bypass DRM, so use external HDMI playback for protected content.
 - Hue decides how physical gradient segments are grouped into Entertainment channels. This project streams the selected area's returned channels; it does not fabricate more.
 - LG private capture APIs and community root methods are unsupported by LG and may change with firmware.
 

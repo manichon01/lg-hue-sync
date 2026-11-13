@@ -2,6 +2,8 @@
   import SettingToggle from './SettingToggle.svelte';
   import { Button } from './components/ui/button';
   import { Link } from '@lucide/svelte';
+  import { onMount } from 'svelte';
+  import { isTv } from './tv';
   import Fader from './Fader.svelte';
   import type { Dashboard } from './dashboard.svelte';
   let { model }: { model: Dashboard } = $props();
@@ -46,6 +48,13 @@
       areaMessage = String(error);
     }
   }
+  onMount(() => {
+    // TV mode shows every section open, so load the areas without waiting for a toggle.
+    if (isTv && !loaded) {
+      loaded = true;
+      void loadAreas();
+    }
+  });
   function showDevices(event: Event) {
     if ((event.currentTarget as HTMLDetailsElement).open && !loaded) {
       loaded = true;
@@ -76,7 +85,7 @@
   const trimStops = [0, 0.5, 1, 1.5, 2, 2.5];
 </script>
 
-<details class="card accordion" ontoggle={showDevices} id="devicesSection">
+<details class="card accordion" ontoggle={showDevices} id="devicesSection" open={isTv}>
   <summary>Devices <span class="muted">Hue &amp; Nanoleaf</span></summary>
   <div class="section-body">
     <SettingToggle
@@ -187,7 +196,7 @@
     </section>
   </div>
 </details>
-<details class="card accordion">
+<details class="card accordion" open={isTv}>
   <summary>Calibration</summary>
   <div class="section-body">
     <p class="muted">
@@ -242,7 +251,7 @@
     </section>
   </div>
 </details>
-<details class="card accordion">
+<details class="card accordion" open={isTv}>
   <summary>Maintenance</summary>
   <div class="section-body">
     <SettingToggle
