@@ -1661,15 +1661,22 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                             let channels: Vec<(u8, (u16, u16, u16))> = sampled_zones
                                 .iter()
                                 .map(|(channel_id, color)| {
-                                    let scaled = if calibration.is_some() {
-                                        *color
-                                    } else {
-                                        color.scale(current_hue_brightness)
-                                    };
                                     if calibration.is_none() && current_use_xy {
-                                        (*channel_id, scaled.to_xy_u16(color::HueGamut::GamutC))
+                                        (
+                                            *channel_id,
+                                            color.to_xy_u16_scaled(
+                                                color::HueGamut::GamutC,
+                                                current_hue_brightness,
+                                            ),
+                                        )
+                                    } else if calibration.is_some() {
+                                        (*channel_id, color.to_u16())
                                     } else {
-                                        (*channel_id, scaled.to_u16())
+                                        (
+                                            *channel_id,
+                                            color.scale_preserving_hue(current_hue_brightness)
+                                                .to_u16(),
+                                        )
                                     }
                                 })
                                 .collect();

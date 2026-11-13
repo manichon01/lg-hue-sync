@@ -64,6 +64,26 @@ impl RgbColor {
         )
     }
 
+    /// Scale brightness without desaturating: never push the strongest channel past 255, so a
+    /// warm colour does not clip towards white when the multiplier is high.
+    pub fn scale_preserving_hue(self, multiplier: f32) -> Self {
+        let strongest = self.r.max(self.g).max(self.b) as f32;
+        if strongest <= 0.0 {
+            return self;
+        }
+        self.scale(multiplier.min(255.0 / strongest))
+    }
+
+    /// CIE xy packet values with the brightness multiplier applied to the luminance only.
+    pub fn to_xy_u16_scaled(self, gamut: HueGamut, multiplier: f32) -> (u16, u16, u16) {
+        let xy = self.to_xy_brightness(gamut);
+        (
+            (xy.x * 65535.0).clamp(0.0, 65535.0).round() as u16,
+            (xy.y * 65535.0).clamp(0.0, 65535.0).round() as u16,
+            (xy.brightness * multiplier as f64 * 65535.0).clamp(0.0, 65535.0).round() as u16,
+        )
+    }
+
     pub fn scale(self, multiplier: f32) -> Self {
         Self::new(
             (self.r as f32 * multiplier).clamp(0.0, 255.0) as u8,
@@ -1460,3 +1480,20 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn hue_preserving_scale_keeps_ratios_and_never_clips_towards_white() {
+        let warm = RgbColor::new(255, 174, 98);
+        assert_eq!(warm.scale_preserving_hue(2.5), warm);
+        let dim = RgbColor::new(100, 50, 25).scale_preserving_hue(2.0);
+        assert_eq!(dim, RgbColor::new(200, 100, 50));
+        let capped = RgbColor::new(200, 100, 50).scale_preserving_hue(5.0);
+        assert_eq!(capped, RgbColor::new(255, 127, 63));
+        assert_eq!(RgbColor::new(0, 0, 0).scale_preserving_hue(3.0), RgbColor::new(0, 0, 0));
+    }
+}
+
