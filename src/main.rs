@@ -1491,6 +1491,16 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                     capture_retry.success();
                     shared_state.capture_hardware.store(true, Ordering::Relaxed);
                 }
+                Err(error)
+                    if update_tv_observation(&mut tv_events, &shared_state).source
+                        == capture_source::CaptureSource::App =>
+                {
+                    // An app that holds the scaler or shows no video: stop reloading libvtcapture.
+                    warn!("App video cannot be captured ({error:#}); waiting for another source.");
+                    capture_retry.success();
+                    source_policy.app_capture_failed();
+                    continue 'sync_loop;
+                }
                 Err(error) => {
                     let delay = capture_retry.failure();
                     shared_state.set_sync_state(

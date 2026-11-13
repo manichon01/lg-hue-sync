@@ -48,7 +48,10 @@ pub(crate) fn parse_source(value: &Value) -> CaptureSource {
         | "com.webos.app.hdmi3"
         | "com.webos.app.hdmi4" => CaptureSource::Hdmi,
         // Home shows no video plane; other apps are tried (DRM apps fail on their own).
-        "com.webos.app.home" => CaptureSource::Unsupported,
+        // Home and our own launcher show no video plane, so there is nothing to capture.
+        "com.webos.app.home" | "org.webosbrew.lg-hue-sync" | "org.webosbrew.hbchannel" => {
+            CaptureSource::Unsupported
+        }
         _ => CaptureSource::App,
     }
 }
@@ -93,9 +96,11 @@ mod tests {
             assert_eq!(source, CaptureSource::App);
             assert_eq!(source.compatible(), Some(true));
         }
-        let home = parse_source(&json!({"returnValue":true,"appId":"com.webos.app.home"}));
-        assert_eq!(home, CaptureSource::Unsupported);
-        assert_eq!(home.compatible(), Some(false));
+        for id in ["com.webos.app.home", "org.webosbrew.lg-hue-sync", "org.webosbrew.hbchannel"] {
+            let source = parse_source(&json!({"returnValue":true,"appId":id}));
+            assert_eq!(source, CaptureSource::Unsupported);
+            assert_eq!(source.compatible(), Some(false));
+        }
         for value in [
             json!({}),
             json!({"appId":"com.webos.app.hdmi1"}),
