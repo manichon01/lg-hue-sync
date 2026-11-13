@@ -144,7 +144,7 @@
   <div class="section-body">
     <p class="muted">
       Test colours pass through the Tuning settings, so you can adjust saturation or brightness and
-      watch the lights. They are also on the Tuning tab. Click ⓘ for the full guide.
+      watch the lights: pick a colour here, then open the Tuning tab and move the sliders. Click ⓘ for the full guide.
     </p>
     <div class="button-row">
       {#each patterns as [value, label] (value)}<Button
