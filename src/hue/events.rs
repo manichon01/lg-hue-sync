@@ -145,6 +145,10 @@ impl HueEvents {
             .name("hue-events".into())
             .spawn(move || {
                 let mut pending = None;
+                // Channel layout seen by the previous subscription. Kept across pause/resume so a
+                // resubscribe that finds the same layout does not force a refresh, which would
+                // tear down a working stream and make the bridge refuse the next handshake.
+                let mut known_layout: Option<(Option<Value>, Option<Value>)> = None;
                 while let Some(mut command) = pending.take().or_else(|| receiver.recv().ok()) {
                     for newer in receiver.try_iter() {
                         command = newer;
@@ -167,11 +171,10 @@ impl HueEvents {
                                 bail!("Hue configuration snapshot has no resource ID");
                             }
                             let mut state = HueEventState {
-                                topology_changed: previous_configuration.as_ref().is_none_or(
-                                    |old| {
-                                        old.get("channels") != configuration.get("channels")
-                                            || old.get("locations")
-                                                != configuration.get("locations")
+                                topology_changed: known_layout.as_ref().is_none_or(
+                                    |(channels, locations)| {
+                                        channels.as_ref() != configuration.get("channels")
+                                            || locations.as_ref() != configuration.get("locations")
                                     },
                                 ),
                                 stream_interrupted: previous_configuration.as_ref().is_some_and(
@@ -185,6 +188,10 @@ impl HueEvents {
                                 configuration,
                             };
                             previous_configuration = Some(state.configuration.clone());
+                            known_layout = Some((
+                                state.configuration.get("channels").cloned(),
+                                state.configuration.get("locations").cloned(),
+                            ));
                             publish(&output, &current, epoch, Ok(state.clone()));
                             state.topology_changed = false;
                             state.stream_interrupted = false;
@@ -193,6 +200,10 @@ impl HueEvents {
                                 retry_delay = Duration::from_secs(2);
                                 if state.apply(&event)? {
                                     previous_configuration = Some(state.configuration.clone());
+                                    known_layout = Some((
+                                        state.configuration.get("channels").cloned(),
+                                        state.configuration.get("locations").cloned(),
+                                    ));
                                     publish(&output, &current, epoch, Ok(state.clone()));
                                     state.topology_changed = false;
                                     state.stream_interrupted = false;
@@ -570,5 +581,63 @@ mod tests {
             .set_read_timeout(Some(Duration::from_secs(1)))
             .unwrap();
         assert_eq!(server.read(&mut [0]).unwrap(), 0);
+    }
+
+    #[test]
+    fn resubscribing_to_an_unchanged_layout_does_not_report_a_topology_change() {
+        let mut servers = Vec::new();
+        let mut clients = Vec::new();
+        for _ in 0..3 {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            clients.push(TcpStream::connect(listener.local_addr().unwrap()).unwrap());
+            let (mut server, _) = listener.accept().unwrap();
+            std::io::Write::write_all(
+                &mut server,
+                b"HTTP/1.1 200 OK
+Content-Type: text/event-stream
+
+",
+            )
+            .unwrap();
+            servers.push(server);
+        }
+        let clients = Mutex::new(clients);
+        let layout = Mutex::new(json!({"id":"area","status":"inactive","channels":[1,2]}));
+        let layout = std::sync::Arc::new(layout);
+        let snapshot_layout = layout.clone();
+        let mut worker = HueEvents::new(
+            move |_| Ok(snapshot_layout.lock().unwrap().clone()),
+            move |_| {
+                let stream = clients.lock().unwrap().remove(0);
+                let cancellation = stream.try_clone()?;
+                Ok(EventConnection::new(Box::new(stream), cancellation))
+            },
+        )
+        .unwrap();
+        let config = Config::new_default("", "", "", "");
+        let wait = |worker: &mut HueEvents| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(3);
+            loop {
+                if let Some(state) = worker.poll() {
+                    break state.unwrap();
+                }
+                assert!(std::time::Instant::now() < deadline);
+                thread::sleep(Duration::from_millis(1));
+            }
+        };
+        worker.request(Some(&config));
+        assert!(wait(&mut worker).topology_changed, "the first subscription refreshes");
+        // Pause and resume with the same layout: no refresh.
+        worker.request(None);
+        worker.request(Some(&config));
+        assert!(!wait(&mut worker).topology_changed);
+        // A changed layout is still reported after the next resume.
+        worker.request(None);
+        *layout.lock().unwrap() = json!({"id":"area","status":"inactive","channels":[1,2,3]});
+        worker.request(Some(&config));
+        assert!(wait(&mut worker).topology_changed);
+        worker.request(None);
+        drop(worker);
+        drop(servers);
     }
 }

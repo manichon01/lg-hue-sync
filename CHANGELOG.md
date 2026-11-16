@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - systemd watchdog (`WatchdogSec=60`) so a frozen daemon restarts itself.
 
 ### Changed
+- Resuming sync no longer restarts a working Hue stream: the channel layout is remembered across pause and resume, and a refresh that finds the same layout is skipped. The DTLS session is closed with a proper `close_notify` so the bridge accepts the next handshake sooner.
+- Mid-tone test colours (skin tone, pastel blue, dark blue) join the calibration buttons and the colour page, because Saturation and Brightness above 1.0× cannot change colours already at their maximum.
 - Built-in apps can be captured; the Home screen, the launcher and the Homebrew Channel pause capture, and apps that cannot be captured pause instead of faulting.
 - The daemon's Luna files are named `org.webosbrew.lg-hue-sync.daemon.*` so installing the launcher app no longer overwrites them.
 

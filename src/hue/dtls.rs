@@ -180,6 +180,14 @@ impl HueDtlsClient {
     }
 }
 
+impl Drop for HueDtlsClient {
+    /// Tell the bridge the session is over, so it can accept the next handshake at once instead
+    /// of holding the old session until it times out.
+    fn drop(&mut self) {
+        let _ = self.stream.shutdown();
+    }
+}
+
 fn hex_to_bytes(hex: &str) -> Result<[u8; 16]> {
     let hex = hex.trim();
     if hex.len() != 32 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {

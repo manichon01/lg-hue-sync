@@ -47,15 +47,31 @@
       void loadAreas();
     }
   }
-  const patterns = [
+  // Pure colours are already at full saturation and brightness, so Saturation and Brightness
+  // above 1.0× cannot change them. The mid-tone colours below can show those sliders working.
+  const patterns: [string, string, [number, number, number]?][] = [
     ['red', 'Red'],
     ['green', 'Green'],
     ['blue', 'Blue'],
     ['white', 'White'],
     ['warm-white', 'Warm 3000K'],
     ['daylight-white', 'Daylight D65'],
+    ['skin', 'Skin tone', [200, 140, 120]],
+    ['pastel-blue', 'Pastel blue', [110, 150, 220]],
+    ['dark-blue', 'Dark blue', [30, 50, 120]],
     ['off', 'Return to sync'],
   ];
+  let custom = $state('');
+  const isActive = (value: string, rgb?: [number, number, number]) =>
+    rgb
+      ? model.status?.calibration_pattern === 'custom' && custom === value
+      : (model.status?.calibration_pattern ?? 'off') === value;
+  function pick(value: string, rgb?: [number, number, number]) {
+    custom = rgb ? value : '';
+    return rgb
+      ? run('/api/test-color', { r: rgb[0], g: rgb[1], b: rgb[2] })
+      : run(`/api/test-pattern/${value}`);
+  }
   const trimStops = [0, 0.5, 1, 1.5, 2, 2.5];
 </script>
 
@@ -147,10 +163,10 @@
       watch the lights: pick a colour here, then open the Tuning tab and move the sliders. Click ⓘ for the full guide.
     </p>
     <div class="button-row">
-      {#each patterns as [value, label] (value)}<Button
-          variant={(model.status?.calibration_pattern ?? 'off') === value ? 'default' : 'secondary'}
+      {#each patterns as [value, label, rgb] (value)}<Button
+          variant={isActive(value, rgb) ? 'default' : 'secondary'}
           disabled={model.busy}
-          onclick={() => run(`/api/test-pattern/${value}`)}>{label}</Button
+          onclick={() => pick(value, rgb)}>{label}</Button
         >{/each}
     </div>
     <a class="text-link" href="/capture-patterns" target="_blank" rel="noopener"
