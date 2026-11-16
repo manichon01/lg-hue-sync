@@ -39,6 +39,18 @@ pub enum CaptureError {
     InvalidFrame(#[from] anyhow::Error),
 }
 
+impl CaptureError {
+    /// libvtcapture opens fine but hands back no buffer (code 17): the TV withholds the picture,
+    /// as it does for protected video such as Prime Video. Retrying the same capture cannot help.
+    pub fn is_withheld_picture(&self) -> bool {
+        matches!(
+            self,
+            CaptureError::Unavailable(error)
+                if error.backend == "libvtcapture" && error.code == 17
+        )
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum RecoveryAction {
     Retry,

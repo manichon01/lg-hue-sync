@@ -96,7 +96,11 @@ mod tests {
             assert_eq!(source, CaptureSource::App);
             assert_eq!(source.compatible(), Some(true));
         }
-        for id in ["com.webos.app.home", "org.webosbrew.lg-hue-sync", "org.webosbrew.hbchannel"] {
+        for id in [
+            "com.webos.app.home",
+            "org.webosbrew.lg-hue-sync",
+            "org.webosbrew.hbchannel",
+        ] {
             let source = parse_source(&json!({"returnValue":true,"appId":id}));
             assert_eq!(source, CaptureSource::Unsupported);
             assert_eq!(source.compatible(), Some(false));

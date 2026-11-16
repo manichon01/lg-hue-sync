@@ -61,7 +61,8 @@ impl RgbColor {
         if strongest <= 0.0 {
             return self;
         }
-        self.scale(multiplier.min(255.0 / strongest))
+        let lifted = lift_unit(strongest / 255.0, multiplier) * 255.0;
+        self.scale(lifted / strongest)
     }
 
     /// CIE xy packet values with the brightness multiplier applied to the luminance only.
@@ -70,7 +71,9 @@ impl RgbColor {
         (
             (xy.x * 65535.0).clamp(0.0, 65535.0).round() as u16,
             (xy.y * 65535.0).clamp(0.0, 65535.0).round() as u16,
-            (xy.brightness * multiplier as f64 * 65535.0).clamp(0.0, 65535.0).round() as u16,
+            (lift_unit(xy.brightness as f32, multiplier) as f64 * 65535.0)
+                .clamp(0.0, 65535.0)
+                .round() as u16,
         )
     }
 
@@ -188,7 +191,7 @@ impl FloatColor {
             return self;
         }
         let mut hsv = Hsv::from_color(self.encoded_rgb());
-        hsv.saturation = (hsv.saturation * boost).clamp(0.0, 1.0);
+        hsv.saturation = lift_unit(hsv.saturation, boost);
         Self::from_encoded(Srgb::from_color(hsv))
     }
 
@@ -201,6 +204,18 @@ impl FloatColor {
         let g_f = (self.g / 255.0).powf(gamma).clamp(0.0, 1.0);
         let b_f = (self.b / 255.0).powf(gamma).clamp(0.0, 1.0);
         Self::new(r_f * 255.0, g_f * 255.0, b_f * 255.0)
+    }
+}
+
+/// Scale a 0..=1 amount by `gain`. Below 1 it is a plain multiply. Above 1 the remaining headroom
+/// shrinks by the same power (1 - (1 - v)^gain), so every step of the slider keeps changing
+/// anything that is not already at full, and nothing clips hard.
+fn lift_unit(value: f32, gain: f32) -> f32 {
+    let value = value.clamp(0.0, 1.0);
+    if gain <= 1.0 {
+        value * gain.max(0.0)
+    } else {
+        1.0 - (1.0 - value).powf(gain)
     }
 }
 
@@ -1421,7 +1436,7 @@ mod tests {
     }
 
     #[test]
-    fn palette_preserves_encoded_mixing_and_multiplicative_hsv_saturation() {
+    fn palette_preserves_encoded_mixing_and_soft_hsv_saturation() {
         let colors = [
             FloatColor::default(),
             FloatColor::new(255.0, 255.0, 255.0),
@@ -1435,7 +1450,7 @@ mod tests {
                 let max = color.r.max(color.g).max(color.b);
                 let min = color.r.min(color.g).min(color.b);
                 let factor = if max > min {
-                    boost.min(max / (max - min))
+                    lift_unit((max - min) / max, boost) / ((max - min) / max)
                 } else {
                     1.0
                 };
@@ -1480,10 +1495,20 @@ mod scale_tests {
         let warm = RgbColor::new(255, 174, 98);
         assert_eq!(warm.scale_preserving_hue(2.5), warm);
         let dim = RgbColor::new(100, 50, 25).scale_preserving_hue(2.0);
-        assert_eq!(dim, RgbColor::new(200, 100, 50));
-        let capped = RgbColor::new(200, 100, 50).scale_preserving_hue(5.0);
-        assert_eq!(capped, RgbColor::new(255, 127, 63));
-        assert_eq!(RgbColor::new(0, 0, 0).scale_preserving_hue(3.0), RgbColor::new(0, 0, 0));
+        assert_eq!(dim, RgbColor::new(160, 80, 40));
+        assert_eq!(
+            RgbColor::new(100, 50, 25).scale_preserving_hue(1.0),
+            RgbColor::new(100, 50, 25)
+        );
+        // Each step above 1.0 keeps changing a non-full colour.
+        let (a, b) = (
+            RgbColor::new(200, 100, 50).scale_preserving_hue(1.5).r,
+            RgbColor::new(200, 100, 50).scale_preserving_hue(2.5).r,
+        );
+        assert!(a > 200 && b > a && b <= 255);
+        assert_eq!(
+            RgbColor::new(0, 0, 0).scale_preserving_hue(3.0),
+            RgbColor::new(0, 0, 0)
+        );
     }
 }
-

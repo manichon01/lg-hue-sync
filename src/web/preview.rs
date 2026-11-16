@@ -351,7 +351,7 @@ mod tests {
         settings.noise_gate_threshold = 0.02;
         assert_eq!(
             render(&frame, &settings).unwrap().rgb,
-            vec![254, 64, 64, 0, 0, 0]
+            vec![254, 76, 76, 0, 0, 0]
         );
         settings.gamma = 0.5;
         settings.saturation_boost = 0.5;

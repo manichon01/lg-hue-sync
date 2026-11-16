@@ -638,7 +638,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
             hue_active && hue_sync_enabled && !web_stop_requested,
         ) {
             if !state.active && hue_dtls.is_some() {
-                                hue_status.blocked = true;
+                hue_status.blocked = true;
             }
             if let Some(ref mut sampler) = hue_sampler {
                 sampler.set_smoothing_factor(state.smoothing_factor);
@@ -797,9 +797,7 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 {
                     source_policy.resumed();
                     hue_status.request(None);
-                    info!(
-                        "Sync resume requested! Reactivating Hue streaming session..."
-                    );
+                    info!("Sync resume requested! Reactivating Hue streaming session...");
                     if requested_running == Some(true) {
                         hue_status.blocked = hue_status.needs_refresh;
                     }
@@ -811,6 +809,9 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                         shared_state.set_sync_state(SyncState::Starting, None);
                     }
                     if !pending_commands.restart {
+                        // Rust builds the new value before dropping the old one: release first, or the new
+                        // client finds the scaler still held by the old one (vtCapture_init error 11).
+                        release_capture(&mut capture);
                         capture = create_capture(config.capture_width, config.capture_height);
                     }
                     shared_state
@@ -1151,6 +1152,9 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
             capture_retry.success();
             if pipeline_state == PipelineState::Running {
                 shared_state.set_sync_state(SyncState::Starting, None);
+                // Rust builds the new value before dropping the old one: release first, or the new
+                // client finds the scaler still held by the old one (vtCapture_init error 11).
+                release_capture(&mut capture);
                 capture = create_capture(config.capture_width, config.capture_height);
             } else {
                 shared_state.set_sync_state(SyncState::Paused, None);
@@ -1306,7 +1310,8 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                                     } else {
                                         (
                                             *channel_id,
-                                            color.scale_preserving_hue(current_hue_brightness)
+                                            color
+                                                .scale_preserving_hue(current_hue_brightness)
                                                 .to_u16(),
                                         )
                                     }
@@ -1369,20 +1374,29 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                             }
                         }
                     }
-
                 }
             }
             Err(e) if calibration_pattern(&shared_state).is_some() => {
                 // A calibration pattern needs no capture: keep the lights running on the fallback.
                 warn!("Capture unavailable during a calibration pattern ({e:#}); continuing without it.");
-                capture = Box::new(MockCapture::new(config.capture_width, config.capture_height));
-                shared_state.capture_hardware.store(false, Ordering::Relaxed);
+                capture = Box::new(MockCapture::new(
+                    config.capture_width,
+                    config.capture_height,
+                ));
+                shared_state
+                    .capture_hardware
+                    .store(false, Ordering::Relaxed);
                 capture_recovery.reset();
                 continue 'sync_loop;
             }
             Err(e) => {
                 shared_state.set_sync_state(SyncState::Recovering, Some(e.to_string()));
-                let delay = match capture_recovery.failed(&e) {
+                let action = if e.is_withheld_picture() {
+                    RecoveryAction::Pause
+                } else {
+                    capture_recovery.failed(&e)
+                };
+                let delay = match action {
                     RecoveryAction::Retry => {
                         if !runtime::wait_for_capture_retry(frame_interval, &shutdown).await {
                             break 'sync_loop;
@@ -1390,8 +1404,9 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                         continue 'sync_loop;
                     }
                     RecoveryAction::Pause
-                        if update_tv_observation(&mut tv_events, &shared_state).source
-                            == capture_source::CaptureSource::App =>
+                        if e.is_withheld_picture()
+                            || update_tv_observation(&mut tv_events, &shared_state).source
+                                == capture_source::CaptureSource::App =>
                     {
                         warn!("App video cannot be captured ({e:#}); waiting for another source.");
                         capture = Box::new(MockCapture::new(
@@ -1481,6 +1496,9 @@ async fn run_daemon(config_path: PathBuf) -> Result<()> {
                 }
 
                 // Re-initialize capture driver
+                // Rust builds the new value before dropping the old one: release first, or the new
+                // client finds the scaler still held by the old one (vtCapture_init error 11).
+                release_capture(&mut capture);
                 capture = create_capture(config.capture_width, config.capture_height);
                 shared_state
                     .capture_hardware

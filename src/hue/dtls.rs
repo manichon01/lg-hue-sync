@@ -121,8 +121,8 @@ impl HueDtlsClient {
             // A silent first handshake must not consume the whole budget: each attempt gets a
             // short deadline and a fresh socket, so the next one starts at once.
             let attempt_deadline = (Instant::now() + ATTEMPT_TIMEOUT).min(deadline);
-            let socket = UdpSocket::bind("0.0.0.0:0")
-                .with_context(|| "Failed to bind local UDP socket")?;
+            let socket =
+                UdpSocket::bind("0.0.0.0:0").with_context(|| "Failed to bind local UDP socket")?;
             socket
                 .connect((target_ip, 2100))
                 .with_context(|| format!("Failed to connect UDP socket to {}", target_addr))?;

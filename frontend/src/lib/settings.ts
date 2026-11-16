@@ -64,14 +64,14 @@ export const faders: {
     label: 'Brightness',
     stops: [0.5, 1, 1.5, 2, 2.5],
     format: (v) => `${Number(v.toFixed(2))}×`,
-    help: 'Scales shared lighting brightness; device output trims remain independent. Colours already at full brightness cannot get brighter.',
+    help: 'Scales shared lighting brightness; device output trims remain independent. Above 1 lifts dim and mid colours progressively; a colour already at full brightness cannot get brighter.',
   },
   {
     key: 'saturation_boost',
     label: 'Saturation',
     stops: [0.5, 1, 1.5, 2, 2.5],
     format: (v) => `${Number(v.toFixed(2))}×`,
-    help: 'Below 1 reduces colour intensity; 1 is unchanged. Higher values push muted colours towards full saturation; colours that are already fully saturated cannot change.',
+    help: 'Below 1 reduces colour intensity; 1 is unchanged. Above 1 pushes muted colours progressively towards full saturation; a colour already fully saturated cannot change.',
   },
   {
     key: 'peak_weight',

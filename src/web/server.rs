@@ -1610,8 +1610,9 @@ async fn test_color(
     State(state): State<AppState>,
     Json(request): Json<TestColorRequest>,
 ) -> Result<Json<StatusMessage>, ApiError> {
-    *state.shared.calibration_pattern.write().unwrap() =
-        Some(CalibrationPattern::Custom([request.r, request.g, request.b]));
+    *state.shared.calibration_pattern.write().unwrap() = Some(CalibrationPattern::Custom([
+        request.r, request.g, request.b,
+    ]));
     Ok(Json(StatusMessage { status: "ok" }))
 }
 
@@ -2521,13 +2522,7 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
         let (sender, _receiver) = mpsc::channel(1);
-        let shared = SharedState::new(
-            settings(),
-            String::new(),
-            String::new(),
-            Vec::new(),
-            sender,
-        );
+        let shared = SharedState::new(settings(), String::new(), String::new(), Vec::new(), sender);
         let original = std::time::Instant::now();
         shared.observe_display_power(true, original);
         assert!(!shared.display_off.load(Ordering::Relaxed));
@@ -2768,13 +2763,7 @@ mod tests {
     async fn closed_or_full_command_queue_does_not_change_request_or_actual_state() {
         let (sender, mut receiver) = mpsc::channel(1);
         sender.send(ControlCommand::Restart).await.unwrap();
-        let shared = SharedState::new(
-            settings(),
-            String::new(),
-            String::new(),
-            Vec::new(),
-            sender,
-        );
+        let shared = SharedState::new(settings(), String::new(), String::new(), Vec::new(), sender);
         shared.set_requested_running(false);
         shared.set_sync_state(SyncState::Faulted, Some("capture busy".into()));
         assert!(tokio::time::timeout(
@@ -2809,13 +2798,7 @@ mod tests {
             (1.0, 0.15, 0.35)
         );
         let (sender, mut receiver) = mpsc::channel(8);
-        let shared = SharedState::new(
-            settings(),
-            String::new(),
-            String::new(),
-            Vec::new(),
-            sender,
-        );
+        let shared = SharedState::new(settings(), String::new(), String::new(), Vec::new(), sender);
         shared
             .select_preset("neonContrast".into(), false)
             .await

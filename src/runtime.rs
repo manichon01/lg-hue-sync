@@ -81,7 +81,11 @@ impl CaptureSourcePolicy {
     }
 
     pub fn observe_source(&mut self, source: crate::capture_source::CaptureSource) {
-        if !matches!(source, crate::capture_source::CaptureSource::App | crate::capture_source::CaptureSource::Unknown) {
+        if !matches!(
+            source,
+            crate::capture_source::CaptureSource::App
+                | crate::capture_source::CaptureSource::Unknown
+        ) {
             self.clear_app_failure();
         }
         self.observe(source.compatible());

@@ -626,7 +626,10 @@ Content-Type: text/event-stream
             }
         };
         worker.request(Some(&config));
-        assert!(wait(&mut worker).topology_changed, "the first subscription refreshes");
+        assert!(
+            wait(&mut worker).topology_changed,
+            "the first subscription refreshes"
+        );
         // Pause and resume with the same layout: no refresh.
         worker.request(None);
         worker.request(Some(&config));

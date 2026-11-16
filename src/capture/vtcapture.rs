@@ -65,6 +65,10 @@ type FnVtCapturePostprocess = unsafe extern "C" fn(*mut c_void, *const c_char) -
 type FnVtCaptureFinalize = unsafe extern "C" fn(*mut c_void, *const c_char) -> c_int;
 type FnVtCaptureRelease = unsafe extern "C" fn(*mut c_void) -> c_int;
 
+/// Set once this process has acquired the scaler, so a later "busy" can be told apart from another owner.
+static HELD_SCALER_BEFORE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 /// Native libvtcapture driver implementation for LG webOS 6.x (LG C1 OLED).
 pub struct VtCapture {
     driver: *mut c_void,
@@ -230,6 +234,15 @@ impl VtCapture {
             );
             if ret_init != 0 {
                 fn_release(driver);
+                if ret_init == 11 && HELD_SCALER_BEFORE.load(std::sync::atomic::Ordering::SeqCst) {
+                    // This process already held the scaler and released it, yet the driver still
+                    // reports it busy (seen after a "null buffer" frame failure on protected video).
+                    // Only a fresh process gets it back, so let systemd restart the service.
+                    error!(
+                        "[-] vtCapture scaler stayed busy after this process released it; exiting so the service restarts with a clean driver"
+                    );
+                    std::process::exit(75);
+                }
                 if ret_init == 11 {
                     error!(
                         "[-] vtCapture_init returned error 11 (EAGAIN/EBUSY): /dev/video* hardware scaler is busy! Another capture process (e.g. lg-hue-sync.service, PicCap) is already running. Stop it with: systemctl stop lg-hue-sync"
@@ -250,6 +263,7 @@ impl VtCapture {
                     return Err(anyhow!("vtCapture_init returned an unterminated client ID"));
                 }
             };
+            HELD_SCALER_BEFORE.store(true, std::sync::atomic::Ordering::SeqCst);
             info!(
                 "[+] vtCapture_init successful (caller: {}, client_id: '{}')",
                 caller_id.to_string_lossy(),
