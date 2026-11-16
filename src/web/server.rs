@@ -275,6 +275,8 @@ pub enum CalibrationPattern {
     White,
     WarmWhite,
     DaylightWhite,
+    /// An exact colour mirrored from the capture patterns page.
+    Custom([u8; 3]),
 }
 
 impl CalibrationPattern {
@@ -300,6 +302,7 @@ impl CalibrationPattern {
             Self::White => "white",
             Self::WarmWhite => "warm-white",
             Self::DaylightWhite => "daylight-white",
+            Self::Custom(_) => "custom",
         }
     }
 }
@@ -787,6 +790,7 @@ fn build_router(state: AppState) -> anyhow::Result<Router> {
         .routes(routes!(sync_bridge))
         .routes(routes!(pair_hue))
         .routes(routes!(test_pattern))
+        .routes(routes!(test_color))
         .split_for_parts();
     document.info.title = "LG Hue Sync HTTP API".to_string();
     document.info.version = env!("CARGO_PKG_VERSION").to_string();
@@ -1584,6 +1588,33 @@ async fn select_hue_area(
     Ok(Json(StatusMessage { status: "selected" }))
 }
 
+#[derive(Deserialize, ToSchema)]
+struct TestColorRequest {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+/// Show one exact colour on the lights, through the normal colour processing.
+#[utoipa::path(
+    post, path = "/api/test-color", tag = "LG Hue Sync",
+    request_body = TestColorRequest,
+    responses(
+        (status = 200, description = "Success", body = StatusMessage),
+        (status = 413, description = "Request body exceeds the 512 KiB limit", body = String, content_type = "text/plain"),
+        (status = 415, description = "JSON content type required", body = String, content_type = "text/plain"),
+        (status = 422, description = "Invalid JSON fields or types", body = String, content_type = "text/plain")
+    )
+)]
+async fn test_color(
+    State(state): State<AppState>,
+    Json(request): Json<TestColorRequest>,
+) -> Result<Json<StatusMessage>, ApiError> {
+    *state.shared.calibration_pattern.write().unwrap() =
+        Some(CalibrationPattern::Custom([request.r, request.g, request.b]));
+    Ok(Json(StatusMessage { status: "ok" }))
+}
+
 /// Select a live calibration pattern, or off for normal capture.
 #[utoipa::path(
     post, path = "/api/test-pattern/{pattern}", tag = "LG Hue Sync",
@@ -1764,6 +1795,55 @@ mod tests {
             .unwrap(),
             receiver,
         )
+    }
+
+    #[tokio::test]
+    async fn test_color_mirrors_an_exact_colour_and_off_clears_it() {
+        use tower::ServiceExt;
+        let (app, _receiver) = test_router();
+        let post = |uri: &str, body: &str| {
+            axum::http::Request::builder()
+                .method("POST")
+                .uri(uri.to_string())
+                .header("content-type", "application/json")
+                .body(axum::body::Body::from(body.to_string()))
+                .unwrap()
+        };
+        let status = |app: Router| async move {
+            let response = app
+                .oneshot(
+                    axum::http::Request::builder()
+                        .uri("/api/status")
+                        .body(axum::body::Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let bytes = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+                .await
+                .unwrap();
+            serde_json::from_slice::<serde_json::Value>(&bytes).unwrap()
+        };
+        let response = app
+            .clone()
+            .oneshot(post("/api/test-color", r#"{"r":10,"g":20,"b":30}"#))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(status(app.clone()).await["calibration_pattern"], "custom");
+        let response = app
+            .clone()
+            .oneshot(post("/api/test-color", r#"{"r":300,"g":0,"b":0}"#))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let response = app
+            .clone()
+            .oneshot(post("/api/test-pattern/off", ""))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(status(app).await["calibration_pattern"].is_null());
     }
 
     #[tokio::test]
@@ -2274,7 +2354,7 @@ mod tests {
         let document: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(document["info"]["version"], env!("CARGO_PKG_VERSION"));
         let paths = document["paths"].as_object().unwrap();
-        assert_eq!(paths.len(), 22);
+        assert_eq!(paths.len(), 23);
         for (path, method) in [
             ("/api/status", "get"),
             ("/api/display", "get"),
@@ -2298,6 +2378,7 @@ mod tests {
             ("/api/sync-bridge", "post"),
             ("/api/pair/hue", "post"),
             ("/api/test-pattern/{pattern}", "post"),
+            ("/api/test-color", "post"),
         ] {
             assert!(paths[path].get(method).is_some(), "{method} {path}");
         }
@@ -2574,7 +2655,6 @@ mod tests {
         assert!(input.validate().is_ok());
         input.gamma = -1.0;
         assert!(matches!(input.validate(), Err(ApiError::BadRequest(_))));
-        input.gamma = 1.0;
     }
 
     #[test]

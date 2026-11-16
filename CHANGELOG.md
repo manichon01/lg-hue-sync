@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nanoleaf 4D support: the `nanoleaf` module, pairing and test commands, `/api/pair/nanoleaf`, `/api/nanoleaf/alignment`, the `nanoleaf_*` status and settings fields, the Quadrants and 4D tracer test patterns, and the Home Assistant Nanoleaf entity. Existing `config.json` files that still contain Nanoleaf fields load normally; the fields are dropped on the next save.
 
 ### Added
+- The full-screen colour page mirrors its colour to the lights (`POST /api/test-color`) and releases them when it is left.
 - TV layout mode (webOS user agent or `?tv=1`): fixed no-scroll dashboard with larger text.
 - Test colour buttons on the Tuning tab; solid test colours pass through the normal colour processing.
 - Live Direct RGB, saturation and brightness controls on the capture patterns page, and a calibration help page (`/calibration-help`).
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The daemon's Luna files are named `org.webosbrew.lg-hue-sync.daemon.*` so installing the launcher app no longer overwrites them.
 
 ### Fixed
+- Devices sections no longer close themselves on every status refresh in normal browsers.
 - Brightness above 1× no longer pushes warm colours towards white.
 
 ## [1.1.0] - 2026-11-03

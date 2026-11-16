@@ -27,13 +27,13 @@
   <p><b>Fixing blues that look teal or green:</b> select <b>Blue</b>, then try turning <b>Direct RGB</b> off (uses the Hue colour conversion)
   and lowering <b>Saturation</b> toward 1.0&times;. Very high saturation darkens pure blue.</p>
 
-  <h2>2. Capture patterns page (tests the full capture path)</h2>
-  <p>The link <b>Open TV capture patterns</b> opens a full-screen colour page. The lights only react if that page is shown on an
-  <b>HDMI input</b> of the TV, because only HDMI video is captured. Opening it in the TV&rsquo;s own browser does nothing.</p>
-  <p>To use it, open <code>http://&lt;tv-address&gt;:8088/capture-patterns</code> in Chrome on a PC or phone and cast that tab to the Google TV
-  (Cast &rarr; Cast tab). The page has its own panel at the bottom with Direct RGB, Saturation and Brightness, and shows the colours being sent
-  to each light.</p>
-
+  <h2>2. Full-screen colour page (screen vs. lights)</h2>
+  <p>The link <b>Open TV capture patterns</b> opens a full-screen page of one colour. While it is open, the lights show the
+  <b>same colour</b> as the screen, through the normal colour processing, so you can compare screen and lights and adjust until they match.
+  It works from any device: the TV&rsquo;s own browser, a phone or a PC. Change the colour with the selector, Previous/Next or the arrow keys.
+  Leaving the page returns the lights to normal sync.</p>
+  <p>A panel at the bottom has Direct RGB, Saturation and Brightness, applied live and saved, and shows the colour being sent to each light.
+  It is hidden in full-screen mode. To compare without the panel, change the settings from another device while the colour stays on screen.</p>
 </main>
 </body>
 </html>

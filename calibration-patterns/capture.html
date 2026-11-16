@@ -40,7 +40,7 @@
     <button id="previous" type="button">Previous</button>
     <button id="next" type="button">Next</button>
     <button id="fullscreen" type="button">Fullscreen</button>
-    <span id="note">Nominal SDR browser colours. Fixed Dolby Vision output is not a mastered DV reference.</span>
+    <span id="note">The lights mirror the colour on screen. Leaving this page returns them to sync.</span>
   </div>
   <div id="tune">
     <label><input id="directRgb" type="checkbox"> Direct RGB</label>
@@ -57,10 +57,25 @@
       magenta: '#ff00ff', yellow: '#ffff00'
     };
     const choice = document.getElementById('choice');
+    // The lights show the same colour as the screen, through the normal colour processing,
+    // so screen and lights can be compared and the Tuning settings adjusted.
+    function mirrorToLights(name) {
+      const hex = colors[name].slice(1);
+      const body = JSON.stringify({
+        r: parseInt(hex.slice(0, 2), 16), g: parseInt(hex.slice(2, 4), 16), b: parseInt(hex.slice(4, 6), 16)
+      });
+      fetch('/api/test-color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => {});
+    }
+    function releaseLights() {
+      // Hand the lights back to normal sync when this page is left.
+      try { navigator.sendBeacon('/api/test-pattern/off'); } catch (_) { /* best effort */ }
+    }
+    window.addEventListener('pagehide', releaseLights);
     function show(name) {
       if (!Object.prototype.hasOwnProperty.call(colors, name)) return;
       choice.value = name;
       document.getElementById('patch').style.backgroundColor = colors[name];
+      mirrorToLights(name);
     }
     function move(offset) {
       const next = (choice.selectedIndex + offset + choice.options.length) % choice.options.length;

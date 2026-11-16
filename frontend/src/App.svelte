@@ -22,7 +22,7 @@
   import BlackFrameSettings from './lib/BlackFrameSettings.svelte';
   import Diagnostics from './lib/Diagnostics.svelte';
   import Streaming from './lib/Streaming.svelte';
-  import { isTv } from './lib/tv';
+  import { isTv, openInTv } from './lib/tv';
   import { vibrate } from './lib/haptics';
   import { registerAgentTools } from './lib/agent-tools';
   const model = new Dashboard();
@@ -295,7 +295,7 @@
         <strong>{help.title}</strong>
         <p>{help.text}</p>
       </aside>
-      <details class="processing" open={isTv}>
+      <details class="processing" {@attach openInTv}>
         <summary>Processing options</summary>
         <div class="section-body">
           <BlackFrameSettings

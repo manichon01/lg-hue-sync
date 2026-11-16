@@ -266,6 +266,7 @@ fn calibration_color(pattern: CalibrationPattern) -> RgbColor {
         CalibrationPattern::White => RgbColor::new(255, 255, 255),
         CalibrationPattern::WarmWhite => RgbColor::new(255, 180, 107),
         CalibrationPattern::DaylightWhite => RgbColor::new(255, 255, 255),
+        CalibrationPattern::Custom([r, g, b]) => RgbColor::new(r, g, b),
     }
 }
 

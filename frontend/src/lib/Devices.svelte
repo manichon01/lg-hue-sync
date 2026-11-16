@@ -3,7 +3,7 @@
   import { Button } from './components/ui/button';
   import { Link } from '@lucide/svelte';
   import { onMount } from 'svelte';
-  import { isTv } from './tv';
+  import { isTv, openInTv } from './tv';
   import Fader from './Fader.svelte';
   import type { Dashboard } from './dashboard.svelte';
   let { model }: { model: Dashboard } = $props();
@@ -59,7 +59,7 @@
   const trimStops = [0, 0.5, 1, 1.5, 2, 2.5];
 </script>
 
-<details class="card accordion" ontoggle={showDevices} id="devicesSection" open={isTv}>
+<details class="card accordion" ontoggle={showDevices} id="devicesSection" {@attach openInTv}>
   <summary>Devices <span class="muted">Hue</span></summary>
   <div class="section-body">
     <SettingToggle
@@ -130,7 +130,7 @@
     </section>
   </div>
 </details>
-<details class="card accordion" open={isTv}>
+<details class="card accordion" {@attach openInTv}>
   <summary
     >Calibration
     <a
@@ -154,11 +154,11 @@
         >{/each}
     </div>
     <a class="text-link" href="/capture-patterns" target="_blank" rel="noopener"
-      >Open TV capture patterns ↗</a
+      >Open full-screen colour page ↗</a
     >
   </div>
 </details>
-<details class="card accordion" open={isTv}>
+<details class="card accordion" {@attach openInTv}>
   <summary>Maintenance</summary>
   <div class="section-body">
     <SettingToggle

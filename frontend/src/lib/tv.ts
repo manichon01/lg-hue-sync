@@ -12,3 +12,11 @@ export const isTv: boolean = (() => {
   }
   return /Web0S|webOS|SmartTV/i.test(navigator.userAgent);
 })();
+
+/**
+ * TV mode shows every section open. Apply it once on mount: a reactive `open={isTv}` attribute is
+ * written again on every status refresh and would close sections the user just opened.
+ */
+export const openInTv = (element: HTMLDetailsElement) => {
+  if (isTv) element.open = true;
+};
